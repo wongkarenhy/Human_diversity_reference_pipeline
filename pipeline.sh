@@ -1,6 +1,8 @@
 # Define variables
 CORES="$1"
 WORKDIR="$2"
+ASSEMBLYTICS="$3"
+METADATA="$4"
 
 cd "$WORKDIR"
 
@@ -35,7 +37,7 @@ fi
 
 # Run assemblytics
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running assemblytics between alignment"
-bash ./scripts/run_assemblytics.sh "$CORES"
+bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS" "$METADATA"
 
 # Process assemblytics output
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Compiling assemblytics output"
@@ -73,7 +75,7 @@ RepeatMasker --species human -pa 16 -ace -html -dir ./repeats assemblytics_repre
 
 # This script annotates all the raw insertions and filter for a set of high confident SVs
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Annotating insertionns and choosing a high confident set"
-Rscript /media/KwokRaid05/karen/new_ref/scripts/make_annotation.R -d "$WORKDIR"
+Rscript ./scripts/make_annotation.R -d "$WORKDIR"
 
 } # end of pipeline
 
