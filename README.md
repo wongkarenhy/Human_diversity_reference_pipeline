@@ -1,6 +1,7 @@
 # Insertion_reference
 
-# Full pipeline to generate the insertion dataset
+# Part 1
+## Full pipeline to generate the insertion dataset
 **bash /media/KwokRaid05/karen/new_ref/scripts/pipeline.sh CORE WORKDIR** <br>
 **For example:** <br>
 bash /media/KwokRaid05/karen/new_ref/scripts/pipeline.sh 32 /media/KwokRaid05/karen/new_ref
@@ -40,3 +41,13 @@ GWAS file: downloaded from the GWAS catalog website but the file is updated week
 **Major output files**<br>
 1. assemblytics_representative_seq_annotated.txt<br>
 2. assemblytics_representative_seq_conf_annotated.txt <br>
+
+# Part 2
+## Construct new reference
+> bash /path/to/make_reference.sh WORKDIR NEW_REF_NAME OLD_REF <br>
+**For example:** <br>
+> bash /media/KwokRaid05/karen/new_ref/scripts/make_reference.sh /media/KwokRaid05/karen/new_ref final_10x \ <br>
+    /media/KwokRaid02/karen/reference/hg38/hg38_primary.fa
+
+
+
