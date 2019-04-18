@@ -38,11 +38,13 @@ Put segdups.bedpe and sv_blacklist.bed in WORKDIR <br>
 Open make_annotation.R and change all the database paths under "# Read input sequences and databases"
 Old reference FASTA header has to follow EXACTLY the following format: <br>
 **>chrX$** (no space or tab allowed) <br>
+
 **Input to part 1:**<br>
 1. Metadata file
 2. Supernova pseudohaplotype unzipped FASTA files (2 files per sample)
 3. Nucmer delta files (2 files per sample)
 4. Ngap bed file (2 files per sample)
+5. BioNano SV smap (1 file per sample)
 
 # Part 0.1
 ## Make a sample metadata file
@@ -70,6 +72,12 @@ File naming format: OUT_$SAMPLE_pseudohap2.1.delta AND OUT_$SAMPLE_pseudohap2.2.
 # Part 0.4
 ## Generate ngap bed files for all pseudohaplotype assemblies <br>
 File naming format: $SAMPLE_pseudohap2.1.ngaps.bed AND $SAMPLE_pseudohap2.2.ngaps.bed
+
+# Part 0.5
+## Generate BioNano SV smaps
+Rerun Bionano's run_SV.py for all the samples. <br>
+All smaps are stored in one directory <br>
+File naming format: $SAMPLE.smap 
 
 # Part 1
 ## Full pipeline to generate the insertion dataset
