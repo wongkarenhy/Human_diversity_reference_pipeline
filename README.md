@@ -1,16 +1,6 @@
 # Insertion_reference
 
-# Part 1
-## Full pipeline to generate the insertion dataset
-**bash /media/KwokRaid05/karen/new_ref/scripts/pipeline.sh CORE WORKDIR** <br>
-**For example:** <br>
-bash /media/KwokRaid05/karen/new_ref/scripts/pipeline.sh 32 /media/KwokRaid05/karen/new_ref
-
-**Usage:**<br>
-Put segdups.bedpe and sv_blacklist.bed in WORKDIR <br>
-Open make_annotation.R and change all the database paths under "# Read input sequences and databases"
-
-**Software used:**<br>
+**Required software:**<br>
 RepeatMasker version open-4.0.7 (Dfam v2.0) <br>
 trf (tandem repeat finder)<br>
 
@@ -42,12 +32,59 @@ GWAS file: downloaded from the GWAS catalog website but the file is updated week
 1. assemblytics_representative_seq_annotated.txt<br>
 2. assemblytics_representative_seq_conf_annotated.txt <br>
 
+
+# Usage:
+Put segdups.bedpe and sv_blacklist.bed in WORKDIR <br>
+Open make_annotation.R and change all the database paths under "# Read input sequences and databases"
+Old reference FASTA header has to follow EXACTLY the following format: <br>
+**>chrX$** (no space or tab allowed) <br>
+**Input to part 1:**<br>
+1. Metadata file
+2. Supernova pseudohaplotype unzipped FASTA files (2 files per sample)
+3. Nucmer delta files (2 files per sample)
+4. Ngap bed file (2 files per sample)
+
+# Part 0.1
+## Make a sample metadata file
+* The metadata file should contain the following columns (* not actually used by pipeline):<br>
+1. SAMPLE 
+2. SEX *
+3. FASTQ_DIR *
+4. LONGRANGER_DIR 
+5. SUPERNOVA_DIR 
+6. BIONANO_ASSEMBLY_DIR *
+7. BN_ENZYME *
+8. SUPERNOVA_VERSION *
+9. ALT_SAMPLE_NAME *
+10. NUCMER_DIR 
+11. POPULATION 
+
+# Part 0.2
+## Run supernova to generate de novo assemblies (FASTA format) <br>
+File naming format: $SAMPLE_pseudohap2.1.fasta AND $SAMPLE_pseudohap2.2.fasta
+
+# Part 0.3
+## Generate nucmer delta files for all pseudohaplotype assemblies<br>
+File naming format: OUT_$SAMPLE_pseudohap2.1.delta AND OUT_$SAMPLE_pseudohap2.2.delta
+
+# Part 0.4
+## Generate ngap bed files for all pseudohaplotype assemblies <br>
+File naming format: $SAMPLE_pseudohap2.1.ngaps.bed AND $SAMPLE_pseudohap2.2.ngaps.bed
+
+# Part 1
+## Full pipeline to generate the insertion dataset
+**bash /media/KwokRaid05/karen/new_ref/scripts/pipeline.sh CORE WORKDIR** <br>
+**For example:** <br>
+bash /media/KwokRaid05/karen/new_ref/scripts/pipeline.sh 32 /media/KwokRaid05/karen/new_ref
+
 # Part 2
 ## Construct new reference
 > bash /path/to/make_reference.sh WORKDIR NEW_REF_NAME OLD_REF <br>
+
 **For example:** <br>
 > bash /media/KwokRaid05/karen/new_ref/scripts/make_reference.sh /media/KwokRaid05/karen/new_ref final_10x \ <br>
-    /media/KwokRaid02/karen/reference/hg38/hg38_primary.fa
+    /media/KwokRaid02/karen/reference/hg38/hg38_primary.fa<br>
+
 
 
 
