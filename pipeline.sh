@@ -39,6 +39,11 @@ if [ ! -d ./discovery/final_fasta/repeats ]; then
     mkdir ./discovery/final_fasta/repeats
 fi
 
+# Gather fasta indexes for contig length info
+# This outputs "$WORKDIR"/discovery/supernova_idx.txt
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Gathering supernova fasta indexes"
+bash /media/KwokRaid05/karen/new_ref/scripts/compile_fasta_idx.sh "$WORKDIR" "$METADATA"    
+
 # Run assemblytics
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running assemblytics between alignment"
 bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS" "$METADATA"
