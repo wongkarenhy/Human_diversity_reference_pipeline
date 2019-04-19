@@ -32,15 +32,15 @@ dir = opt$dir
 # ------------------------------------------------------------ Part 1: Annotation --------------------------------------------------------------
 # Read input sequences and databases
 seq = fread(paste0(dir, "/discovery/assemblytics_representative_seq.txt"), header = T, stringsAsFactors = F)
-gene = fread("/media/KwokRaid02/karen/database/refFlat_hg38.txt", stringsAsFactors = F)
+gene = fread("/media/KwokRaid02/karen/database/genome_annotation/03312019/refFlat.txt", stringsAsFactors = F)
 exon = fread("/media/KwokRaid02/karen/database/genome_annotation/refgene_exon.bed", stringsAsFactors = F)
 non_coding = fread("/media/KwokRaid02/karen/database/genome_annotation/01062019/lincRNAsTranscripts.txt", stringsAsFactors = F)
-gencodeV29_nrRNA = fread("/media/KwokRaid02/karen/database/genome_annotation/03182019/gencode.v29.long_noncoding_RNAs_simplified.gtf", stringsAsFactors = F)
-gencodeV29_pseudo = fread("/media/KwokRaid02/karen/database/genome_annotation/03182019/gencode.v29.2wayconspseudos_simplified.gtf", stringsAsFactors = F)
+gencodeV29_nrRNA = fread("/media/KwokRaid02/karen/database/genome_annotation/09292018/gencode.v29.long_noncoding_RNAs_simplified.gtf", stringsAsFactors = F)
+gencodeV29_pseudo = fread("/media/KwokRaid02/karen/database/genome_annotation/09292018/gencode.v29.2wayconspseudos_simplified.gtf", stringsAsFactors = F)
 gwas = fread("/media/KwokRaid02/karen/database/gwasCatalog.txt", stringsAsFactors = F, sep = '\t')
-metadata = read.table("/media/KwokRaid05/karen/new_ref/ALL_sample_metadata.txt", stringsAsFactors = F)
-repeatMasker = read.table("/media/KwokRaid05/karen/new_ref/discovery/final_fasta/repeats/assemblytics_representative_seq.fa.out", stringsAsFactors = F, skip = 3, comment.char = "*")
-trf = fread("/media/KwokRaid05/karen/new_ref/discovery/final_fasta/trf_rep_seq_count.txt", stringsAsFactors = F)
+metadata = read.table(paste0(dir, "/ALL_sample_metadata.txt"), stringsAsFactors = F)
+repeatMasker = read.table(dir, "/discovery/final_fasta/repeats/assemblytics_representative_seq.fa.out", stringsAsFactors = F, skip = 3, comment.char = "*")
+trf = fread(dir ,"/discovery/final_fasta/trf_rep_seq_count.txt", stringsAsFactors = F)
 
 # Subset the proper columns
 gene = gene[,c(1,3,5,6,10,11)]
@@ -90,9 +90,12 @@ seq$gencodeV29_nrRNA[seq_gencodeV29_nrRNA_ov@from] = 1
 seq$gencodeV29_pseudo = 0
 seq$gencodeV29_pseudo[seq_gencodeV29_pseudo_ov@from] = 1
 
+seq$gwas = NA
+seq$gwas_populations = NA
+seq$gwas_Pas = NA
 seq$gwas[seq_gwas_ov@from] = gwas$pheno[seq_gwas_ov@to]
 seq$gwas_populations[seq_gwas_ov@from] = gwas$populations[seq_gwas_ov@to]
-seq$gwgwas_Pas[seq_gwas_ov@from] = gwas$Pval[seq_gwas_ov@to]
+seq$gwas_Pas[seq_gwas_ov@from] = gwas$Pval[seq_gwas_ov@to]
 
 # Calculate distance to the nearest gene
 seq$min_dist_to_exon = NA
@@ -157,7 +160,7 @@ seq_merged = merge(seq_merged, trf, all.x = T, by.x = c("assm_id", "adjusted_ass
 seq_merged = seq_merged[,c(3:16,1,17:43,2,44:70)]
 
 # Write the annotated output
-write.table(seq_merged, paste0(dir, "/discoery/assemblytics_representative_seq_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
+write.table(seq_merged, paste0(dir, "/discovery/assemblytics_representative_seq_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
 # Define a conf list for constructing the reference
 conf = seq_merged[seq_merged$ngap_boundaries=="no" & seq_merged$N_perct<0.9,]
@@ -174,11 +177,12 @@ write.table(conf, paste0(dir, "/discovery/assemblytics_representative_seq_conf_a
 #write.table(ngap, "../discovery/assemblytics_representative_seq_resolvable_ngap.txt", col.names = T, row.names = F, quote = F, sep = '\t')
 
 # Get a list of all sequences with Ngaps
-#all_ngap = seq_merged[seq_merged$ngap!=0,]
+seq_merged = fread("../discovery/assemblytics_representative_seq_annotated.txt", stringsAsFactors = F, sep = '\t')
+all_ngap = seq_merged[seq_merged$ngap!=0,]
 #write.table(all_ngap, "../discovery/assemblytics_representative_seq_all_ngap.txt", col.names = T, row.names = F, quote = F, sep = '\t')
-#send_eleanor = all_ngap[,c(1:8,22,23)]
-#send_eleanor$haplo = ifelse(send_eleanor$haplo=="2.1;2.2", "2.1", send_eleanor$haplo)
-#write.table(send_eleanor, "../discovery/assemblytics_representative_seq_send_eleanor.txt", col.names = T, row.names = F, quote = F, sep = '\t')
+send_eleanor = all_ngap[,c(1:8,22,23)]
+send_eleanor$haplo = ifelse(send_eleanor$haplo=="2.1;2.2", "2.1", send_eleanor$haplo)
+write.table(send_eleanor, "../discovery/assemblytics_representative_seq_send_eleanor.txt", col.names = T, row.names = F, quote = F, sep = '\t')
 
 
 # ------------------------------------------------------------ Part 3: Manual plotting -----------------------------------------------------------

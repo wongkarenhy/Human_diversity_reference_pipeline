@@ -9,7 +9,7 @@ NEW_REF_NAME="$2"
 OLD_REF="$3"
 
 # Create reference path
-if [ ! -d "$WORKDIR"/reference ];
+if [ ! -d "$WORKDIR"/reference ];then
     mkdir "$WORKDIR"/reference
 fi
 
@@ -70,7 +70,7 @@ done < ID_key_subsetted.txt
 cd "$WORKDIR"/reference
 
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Making the new reference file"    
-python2.7 "$WORKDIR"/scripts/reference_lifeover.py \
+python2.7 "$WORKDIR"/scripts/reference_liftover.py \
     -r "$OLD_REF" \
     -f "$WORKDIR"/discovery/final_fasta/ref/"$NEW_REF_NAME"_name_changed.fa \
     -s hg38_"$NEW_REF_NAME".fa -n record_"$NEW_REF_NAME".tsv > log.txt 

@@ -19,6 +19,10 @@ set -e
 pipeline(){
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "#> START: " $0 
 
+if [ ! -d ./assemblytics ]; then
+    mkdir ./assemblytics
+fi
+
 if [ ! -d ./discovery ]; then
     mkdir ./discovery
 fi

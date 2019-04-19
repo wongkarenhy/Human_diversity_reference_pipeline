@@ -66,11 +66,26 @@ representative_seq$adjusted_assm_start = ifelse(representative_seq$ref_gap_size 
 representative_seq$adjusted_assm_end = ifelse(representative_seq$ref_gap_size <0,representative_seq$assm_end-representative_seq$ref_gap_size, representative_seq$assm_end)
 representative_seq$ref_start = representative_seq$ref_start - 1
 
-# adjusted_assm_start has to be greater than 0
-representative_seq = representative_seq[representative_seq$adjusted_assm_start>0,]
+# Add contig lenth to avoid "truncated seq" problem
+#representative_seq$contig_length = NA
+representative_seq$haplo_dup = substr(representative_seq$haplo,1,3)
+
+# Read file containing contig length info
+fai = fread(paste0(dir,"/discovery/supernova_idx.txt"), stringsAsFactors = F)
+colnames(fai) = c("assm_id", "contig_length", "sample", "haplo")
+fai$haplo = as.character(fai$haplo)
+
+representative_seq = merge(representative_seq, fai, all.x = T, by.x = c("assm_id", "sample", "haplo_dup"), by.y = c("assm_id", "sample", "haplo"))
+# Remove if adjusted_assm_start or adjusted_assm_end is outside the contig length
+representative_seq = representative_seq[representative_seq$adjusted_assm_start>0 && (representative_seq$adjusted_assm_end < representative_seq$contig_length),]
+# Remove contig_length and haplo_dup
+representative_seq = representative_seq[,c(4:17,1,18:23,2,24:45)]
+
+##------------------------------------------------PacBio comparison----------------------------------------------
+# Make another GRange object for PB comparison
 representative_seq.gr = makeGRangesFromDataFrame(representative_seq, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end")
 
-# Also compare with EEE's datasets and add an additional column
+# Compare with EEE's SV datasets and add an additional column
 
 # Break the INFO column
 vcf$type = substr(str_split_fixed(vcf$INFO, ";", 40)[,1],8,10)
@@ -124,7 +139,19 @@ for (i in unique(PB_rep_ov@from)){
 
 representative_seq$PB = as.numeric(representative_seq$PB)
 # PB validation is +/- 50bp
-representative_seq$PB_validated = ifelse(abs(representative_seq$PB-representative_seq$insert_size)<=50, 1,0)
+representative_seq$PB_validated = ifelse(abs(representative_seq$PB-representative_seq$insert_size) <= 50, 1,0)
+
+
+#for (i in 1:nrow(representative_seq)){
+    
+#    id = as.character(representative_seq[i,"assm_id"])
+#    s = as.character(representative_seq[i,"sample"])
+#    h = substr(representative_seq[i,"haplo"],1,3)
+    
+#    length = fai[fai$sample==s & fai$haplo==h & fai$contig_id==id,"contig_length"]
+#    representative_seq[i,"contig_length"] = length
+  
+#}
 
 write.table(representative_seq, paste0(dir, "/discovery/assemblytics_representative_seq.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
@@ -139,6 +166,11 @@ write.table(representative_seq, paste0(dir, "/discovery/assemblytics_representat
 
 
 
+
+
+
+
+#representative_seq = fread("../discovery/assemblytics_representative_seq.txt", stringsAsFactors = F, header = T)
 # Define high confident set
 #representative_seq_conf = representative_seq[representative_seq$ngap_boundaries=="no" & representative_seq$sample_count>1 ,] 
 #singleton_conf_no_ngap = representative_seq[representative_seq$ngap_boundaries=="no" & representative_seq$sample_count==1 & representative_seq$ngap==0 & (representative_seq$validated==1|representative_seq$PB_validated==1),]
