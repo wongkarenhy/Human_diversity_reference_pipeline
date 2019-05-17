@@ -1,5 +1,5 @@
 #!/usr/lib64/R/bin/Rscript
-# This script combines the two pseudohaps into a single file per sample
+# This script combines all individual processed assemblytics files
 # Remove all previous variables
 rm(list=ls())
 ######################################################################################################################
@@ -15,39 +15,43 @@ option_list = list(
 opt = parse_args(OptionParser(option_list=option_list))
 ################################################################################################################
 suppressMessages(library(GenomicRanges))
+suppressMessages(library(stringr))
 
 # Prase user input
 dir = opt$dir
 
 source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 
+metadata = read.table(paste0(dir, "/ALL_sample_metadata.txt"), stringsAsFactors = F)
+colnames(metadata) = c("SAMPLE", "SEX", "FASTQ_DIR", "LONGRANGER_DIR", "ASSM_DIR", "BN_DIR", "ENZYME", "SUPERNOVA_VER", "ALT_NAME", "NUCMER_DIR", "POPULATION")
+
 file_path = paste0(dir, "/discovery/raw/")
 file_list = list.files(file_path, pattern = "raw_results.txt")
 
+# Keep samples that are in the metadata sample list
+file_list_sample = str_split_fixed(file_list, "_",2)[,1]
+file_list = file_list[(file_list_sample %in% metadata$SAMPLE) | (file_list_sample %in% metadata$ALT_NAME)]
+
 # Read all the processed assemblytics files
-## Right now there are only 254 files (those missing have no BN files)
 assemblytics_ALL = NULL
 for (i in file_list){
   
   print(i)
-  assemblytics = read.table(paste0(file_path,i), stringsAsFactors = F,header = T)
-  # For now we're taking out samples if they have no BN data
-  # if (any(is.na(assemblytics$BN_size))) next
+  # Read individual processed assemblytics file
+  assemblytics = read.table(paste0(file_path,i), stringsAsFactors = F, header = T)
   
-  # make sure there aren't duplicated entries again
-  keep = which(!duplicated(assemblytics[,c("ref_chr", "ref_start", "ref_end")]))
-  assemblytics = assemblytics[keep,]
-  
+  # Combine
   assemblytics_ALL = rbind.data.frame(assemblytics_ALL, assemblytics, stringsAsFactors = F)
+  
 }
 
-sample_list = unique(assemblytics_ALL$sample)
+#sample_list = unique(assemblytics_ALL$sample)
 
-assemblytics_ALL_pseudohap_combined = combinePseudohaps(sample_list, assemblytics_ALL)
+#assemblytics_ALL_pseudohap_combined = combinePseudohaps(sample_list, assemblytics_ALL)
 
 # Turn off scientific notation
 options(scipen=999)
-write.table(assemblytics_ALL_pseudohap_combined, paste0(dir, "/discovery/assemblytics_pseudohap_combined_results.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
+write.table(assemblytics_ALL, paste0(dir, "/discovery/assemblytics_combined_results.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
 
 

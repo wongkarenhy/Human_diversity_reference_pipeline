@@ -42,18 +42,17 @@ fi
 # Gather fasta indexes for contig length info
 # This outputs "$WORKDIR"/discovery/supernova_idx.txt
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Gathering supernova fasta indexes"
-bash /media/KwokRaid05/karen/new_ref/scripts/compile_fasta_idx.sh "$WORKDIR" "$METADATA"    
+bash ./scripts/compile_fasta_idx.sh "$WORKDIR" "$METADATA"    
 
 # Run assemblytics
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running assemblytics between alignment"
-bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS" "$METADATA"
+bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS"
 
 # Process assemblytics output
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Compiling assemblytics output"
 Rscript ./scripts/compile_assemblytics.R -t "$CORES" -d "$WORKDIR" \
-    -b "/media/KwokRaid02/karen/database/BN_SV7989/" \
-    -c /media/KwokRaid04/CIAPM/CIAPM_supernova/ngap/ \
-    -g /media/KwokRaid04/1000GP/supernova2/1000GP_sn2/ngap/
+    -b /media/KwokRaid02/karen/database/BN_SV7989/ \
+    -n /media/KwokRaid04/assembly_ngap/ 
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Combining the two pseudohaplotypes"
 Rscript ./scripts/compile_assemblytics_2.R  -d "$WORKDIR" # combine pseudohaplotypes
@@ -83,6 +82,7 @@ echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running repeatMasker"
 RepeatMasker --species human -pa 16 -ace -html -dir ./repeats assemblytics_representative_seq.fa
 
 # This script annotates all the raw insertions and filter for a set of high confident SVs
+cd "$WORKDIR"
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Annotating insertionns and choosing a high confident set"
 Rscript ./scripts/make_annotation.R -d "$WORKDIR"
 

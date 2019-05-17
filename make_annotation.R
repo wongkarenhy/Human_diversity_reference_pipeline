@@ -35,12 +35,12 @@ seq = fread(paste0(dir, "/discovery/assemblytics_representative_seq.txt"), heade
 gene = fread("/media/KwokRaid02/karen/database/genome_annotation/03312019/refFlat.txt", stringsAsFactors = F)
 exon = fread("/media/KwokRaid02/karen/database/genome_annotation/refgene_exon.bed", stringsAsFactors = F)
 non_coding = fread("/media/KwokRaid02/karen/database/genome_annotation/01062019/lincRNAsTranscripts.txt", stringsAsFactors = F)
-gencodeV29_nrRNA = fread("/media/KwokRaid02/karen/database/genome_annotation/09292018/gencode.v29.long_noncoding_RNAs_simplified.gtf", stringsAsFactors = F)
-gencodeV29_pseudo = fread("/media/KwokRaid02/karen/database/genome_annotation/09292018/gencode.v29.2wayconspseudos_simplified.gtf", stringsAsFactors = F)
+gencodeV29_nrRNA = fread("/media/KwokRaid02/karen/database/genome_annotation/09282018/gencode.v29.long_noncoding_RNAs_simplified.gtf", stringsAsFactors = F)
+gencodeV29_pseudo = fread("/media/KwokRaid02/karen/database/genome_annotation/09282018/gencode.v29.2wayconspseudos_simplified.gtf", stringsAsFactors = F)
 gwas = fread("/media/KwokRaid02/karen/database/gwasCatalog.txt", stringsAsFactors = F, sep = '\t')
 metadata = read.table(paste0(dir, "/ALL_sample_metadata.txt"), stringsAsFactors = F)
-repeatMasker = read.table(dir, "/discovery/final_fasta/repeats/assemblytics_representative_seq.fa.out", stringsAsFactors = F, skip = 3, comment.char = "*")
-trf = fread(dir ,"/discovery/final_fasta/trf_rep_seq_count.txt", stringsAsFactors = F)
+repeatMasker = read.table(paste0(dir, "/discovery/final_fasta/repeats/assemblytics_representative_seq.fa.out"), stringsAsFactors = F, skip = 3, comment.char = "*")
+trf = fread(paste0(dir ,"/discovery/final_fasta/trf_rep_seq_count.txt"), stringsAsFactors = F)
 
 # Subset the proper columns
 gene = gene[,c(1,3,5,6,10,11)]
@@ -114,7 +114,7 @@ for (i in 1:nrow(seq)){
 
 # Do a chi-sq analysis to see if the population distributions are uneven (for each insertion)
 pop_total_count = as.data.frame(table(metadata$population))
-seq$pop_chisq_P = apply(seq[,c(31:35)],1, function(x) chisq.test(rbind(x,pop_total_count$Freq))$p.value)
+seq$pop_chisq_P = apply(seq[,c("sample_AFR", "sample_AMR", "sample_EAS", "sample_EUR", "sample_SAS")],1, function(x) chisq.test(rbind(x,pop_total_count$Freq))$p.value)
 
 # Adjust p value for multiple testings
 seq$pop_chisq_P_adj = p.adjust(seq$pop_chisq_P, method = "BH")
@@ -126,7 +126,6 @@ repeatMasker$key_start = str_split_fixed(repeatMasker$name, ":|-", 3)[,2]
 repeatMasker = merge(repeatMasker, seq[,c("assm_id", "adjusted_assm_start", "insert_size", "ref_gap_size", "q_gap_size")], all.x = T, by.x = c("key_id", "key_start"), by.y = c("assm_id", "adjusted_assm_start"))
 repeatMasker$total_size = ifelse(repeatMasker$ref_gap_size<0, repeatMasker$insert_size-(repeatMasker$ref_gap_size*2), repeatMasker$insert_size)
 repeatMasker$repeat_frac = (repeatMasker$end - repeatMasker$start)/repeatMasker$total_size
-#a = seq
 
 repeats = NULL
 for (i in unique(repeatMasker$name)){
@@ -177,12 +176,12 @@ write.table(conf, paste0(dir, "/discovery/assemblytics_representative_seq_conf_a
 #write.table(ngap, "../discovery/assemblytics_representative_seq_resolvable_ngap.txt", col.names = T, row.names = F, quote = F, sep = '\t')
 
 # Get a list of all sequences with Ngaps
-seq_merged = fread("../discovery/assemblytics_representative_seq_annotated.txt", stringsAsFactors = F, sep = '\t')
-all_ngap = seq_merged[seq_merged$ngap!=0,]
+#seq_merged = fread("../discovery/assemblytics_representative_seq_annotated.txt", stringsAsFactors = F, sep = '\t')
+#all_ngap = seq_merged[seq_merged$ngap!=0,]
 #write.table(all_ngap, "../discovery/assemblytics_representative_seq_all_ngap.txt", col.names = T, row.names = F, quote = F, sep = '\t')
-send_eleanor = all_ngap[,c(1:8,22,23)]
-send_eleanor$haplo = ifelse(send_eleanor$haplo=="2.1;2.2", "2.1", send_eleanor$haplo)
-write.table(send_eleanor, "../discovery/assemblytics_representative_seq_send_eleanor.txt", col.names = T, row.names = F, quote = F, sep = '\t')
+#send_eleanor = all_ngap[,c(1:8,22,23)]
+#send_eleanor$haplo = ifelse(send_eleanor$haplo=="2.1;2.2", "2.1", send_eleanor$haplo)
+#write.table(send_eleanor, "../discovery/assemblytics_representative_seq_send_eleanor.txt", col.names = T, row.names = F, quote = F, sep = '\t')
 
 
 # ------------------------------------------------------------ Part 3: Manual plotting -----------------------------------------------------------
