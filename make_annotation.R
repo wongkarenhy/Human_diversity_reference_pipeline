@@ -38,7 +38,7 @@ non_coding = fread("/media/KwokRaid02/karen/database/genome_annotation/01062019/
 gencodeV29_nrRNA = fread("/media/KwokRaid02/karen/database/genome_annotation/09282018/gencode.v29.long_noncoding_RNAs_simplified.gtf", stringsAsFactors = F)
 gencodeV29_pseudo = fread("/media/KwokRaid02/karen/database/genome_annotation/09282018/gencode.v29.2wayconspseudos_simplified.gtf", stringsAsFactors = F)
 gwas = fread("/media/KwokRaid02/karen/database/gwasCatalog.txt", stringsAsFactors = F, sep = '\t')
-metadata = read.table(paste0(dir, "/ALL_sample_metadata.txt"), stringsAsFactors = F)
+metadata = read.table(paste0(dir, "/TMP_sample_metadata.txt"), stringsAsFactors = F)
 repeatMasker = read.table(paste0(dir, "/discovery/final_fasta/repeats/assemblytics_representative_seq.fa.out"), stringsAsFactors = F, skip = 3, comment.char = "*")
 trf = fread(paste0(dir ,"/discovery/final_fasta/trf_rep_seq_count.txt"), stringsAsFactors = F)
 
@@ -145,25 +145,30 @@ for (i in unique(repeatMasker$name)){
   repeats = rbind.data.frame(repeats, df, stringsAsFactors = F)
 }
 
-repeats$key_id = as.numeric(repeats$key_id)
+# Make sure the keys are of the same class
+repeats$key_id = as.character(repeats$key_id)
 repeats$key_start = as.numeric(repeats$key_start)
+seq$aassm_id = as.character(seq$aassm_id)
+seq$adjusted_assm_start = as.numeric(seq$adjusted_assm_start)
 # Merge repeats dataframe back to seq
 seq_merged = merge(seq, repeats, all.x = T, by.x = c("assm_id", "adjusted_assm_start"), by.y = c("key_id", "key_start"))
 
 # Merge TRF percent for each entry
-trf$key_id = as.numeric(str_split_fixed(trf$query, ":|-", 3)[,1])
+trf$key_id = as.character(str_split_fixed(trf$query, ":|-", 3)[,1])
 trf$key_start = as.numeric(str_split_fixed(trf$query, ":|-", 3)[,2])
 seq_merged = merge(seq_merged, trf, all.x = T, by.x = c("assm_id", "adjusted_assm_start"), by.y = c("key_id", "key_start"))
 
 # Remove unucessary columns
-seq_merged = seq_merged[,c(3:16,1,17:43,2,44:70)]
+seq_merged = seq_merged[,c(3:17,1,18:23,2,24:74)]
 
 # Write the annotated output
 write.table(seq_merged, paste0(dir, "/discovery/assemblytics_representative_seq_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
 # Define a conf list for constructing the reference
 conf = seq_merged[seq_merged$ngap_boundaries=="no" & seq_merged$N_perct<0.9,]
-conf = conf[conf$sample_count>1 | (conf$sample_count==1 & conf$ngap==0 & conf$PB_validated==1), ]
+conf = conf[(conf$sample_count>1 | (conf$sample_count==1 & conf$ngap==0 & conf$PB_validated==1)), ]
+# Remove if sample_count is 1 but haplo is "unphased"
+conf = conf[-which(conf$sample_count==1 & conf$haplo=="unphased"), ]
 write.table(conf, paste0(dir, "/discovery/assemblytics_representative_seq_conf_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
 

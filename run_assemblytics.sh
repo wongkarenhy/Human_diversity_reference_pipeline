@@ -2,16 +2,15 @@
 cores="$1"
 workdir="$2"
 assemblytics="$3"
-mode="$4"
 
 # Exit immediately upon error
 set -e
 
 cd "$workdir"/assemblytics
 
-while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNOVA_VER ALT_NAME NUCMER_DIR POPULATION; do 
+while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNOVA_VER ALT_NAME NUCMER_DIR POPULATION SRC; do 
     
-    if [ "$mode" = "PB" ]; then
+    if [ "$SRC" = "PB" ]; then
         
         (bash "${assemblytics}/Assemblytics" "$NUCMER_DIR" \
                 "$SAMPLE" 10000; 
@@ -19,7 +18,9 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
         python2.7 "${assemblytics}/compute_overlapping_coords.py" \
             -d "$NUCMER_DIR" \
             -i "$SAMPLE".variants_between_alignments.bed \
-            -o "$SAMPLE".variants_between_alignments_new.bed) &
+            -o "$SAMPLE".variants_between_alignments_new.bed;
+        
+        echo [`date +"%Y-%m-%d %H:%M:%S"`] "run_assemblytics.sh: ${SAMPLE}_unphased DONE") &
     
     else
     
@@ -32,7 +33,9 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
             python2.7 "${assemblytics}/compute_overlapping_coords.py" \
                 -d "$NUCMER_DIR""$haplo".delta \
                 -i "$SAMPLE"_"$haplo".variants_between_alignments.bed \
-                -o "$SAMPLE"_"$haplo".variants_between_alignments_new.bed) &
+                -o "$SAMPLE"_"$haplo".variants_between_alignments_new.bed;
+            
+            echo [`date +"%Y-%m-%d %H:%M:%S"`] "run_assemblytics.sh: ${SAMPLE}_${haplo} DONE") &
 
         done
     
@@ -43,4 +46,6 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
         wait
     fi
 
-done < "${workdir}/${mode}_sample_metadata.txt"    
+done < "${workdir}/TMP_sample_metadata.txt"    
+
+wait

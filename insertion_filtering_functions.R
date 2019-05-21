@@ -279,13 +279,17 @@ findRepresentativeSeq = function(i){
     comp = comp_list[i]
     df = assemblytics_combined_per_chr[(assemblytics_combined_per_chr$component==comp),]
     
+    # Duplicate the lines of haplo=="unphased"
+    dup = df[df$haplo=="unphased", ]
+    df = rbind.data.frame(df, dup, stringsAsFactors = F)
+    
     # Initialize the edge variables
     edge_start = NA
     edge_end = NA
     
     # testing
     df_clean = (df[df$ngap==0,c("ref_start", "ref_end")])
-    if (nrow(df_clean) > 1){
+    if (nrow(df_clean) > 2){
       
         edge_start = cal_edge_size(df_clean$ref_start)
         edge_end = cal_edge_size(df_clean$ref_end)
@@ -298,13 +302,13 @@ findRepresentativeSeq = function(i){
     sample_df = unique(df[,c("sample", "population")])
     sample_count = nrow(sample_df)
     
-    for (pop in unique(metadata$population)){
+    for (pop in c("AFR", "AMR", "EAS", "EUR", "SAS")){
       assign(paste0("sample_", pop), nrow(sample_df[sample_df$population==pop,]))
       assign(paste0("percent_", pop), round(eval(parse(text=paste0("sample_",pop)))/length(which(metadata$population==pop)),3))
     }
     
     sample_record = unlist(paste0(df$INS_id,"_",df$population))
-    sample_record = paste(sample_record, collapse = ';')
+    sample_record = paste(unique(sample_record), collapse = ';')
     
     sample_nonAFR = sum(sample_AMR, sample_EAS, sample_EUR, sample_SAS)
     percent_nonAFR = sample_nonAFR/nrow(metadata[metadata$population!="AFR",])

@@ -33,14 +33,14 @@ ngap = opt$ngap
 source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 
 # Read sample metadata (so we only use samples in the metadata)
-metadata = read.table(paste0(dir, "/ALL_sample_metadata.txt"), stringsAsFactors = F)
-colnames(metadata) = c("SAMPLE", "SEX", "FASTQ_DIR", "LONGRANGER_DIR", "ASSM_DIR", "BN_DIR", "ENZYME", "SUPERNOVA_VER", "ALT_NAME", "NUCMER_DIR", "POPULATION")
+metadata = read.table(paste0(dir, "/TMP_sample_metadata.txt"), stringsAsFactors = F)
+colnames(metadata) = c("SAMPLE", "SEX", "FASTQ_DIR", "LONGRANGER_DIR", "ASSM_DIR", "BN_DIR", "ENZYME", "SUPERNOVA_VER", "ALT_NAME", "NUCMER_DIR", "POPULATION", "SRC")
 
 # Grab all files in the assemblytics directory
 file_list = list.files(paste0(dir, "/assemblytics/"), pattern = "variants_between_alignments_new.bed")
 
 # Keep samples that are in the metadata sample list
-file_list_sample = str_split_fixed(file_list, "_",2)[,1]
+file_list_sample = str_split_fixed(file_list, "_|\\.",2)[,1]
 file_list = file_list[(file_list_sample %in% metadata$SAMPLE) | (file_list_sample %in% metadata$ALT_NAME)]
 
 # Get a list of samples with BN DLE data
@@ -60,8 +60,12 @@ processAlignment = function(i) {
   
   print(i)
   
-  sample = str_split_fixed(i, "_", 2)[,1]
+  sample = str_split_fixed(i, "_|\\.", 2)[,1]
+
   haplo = substr((str_split_fixed(i, "_", 2)[,2]), 1,3)
+  if (haplo!="2.1" & haplo!="2.2"){ #PB samples are unphased
+      haplo = "unphased"
+  }
 
   assemblytics = read.table(paste0(dir, "/assemblytics/",i), stringsAsFactors = F)
   assemblytics = assemblytics[,-11]
@@ -72,7 +76,7 @@ processAlignment = function(i) {
 
   # Remove INS if ref_gap_size is <-7kb or >1kb
   assemblytics = assemblytics[(assemblytics$ref_gap_size>=(-7000) & assemblytics$ref_gap_size<=1000),]
-  print(1)
+
   # Calculate ref_gap_size to query_gap_size ratio
   assemblytics$gap_ratio = assemblytics$ref_gap_size/assemblytics$q_gap_size
   
@@ -81,7 +85,6 @@ processAlignment = function(i) {
   
   # Make a GRange object for assemblytics
   assemblytics.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end")
-  print(2)
   
   # Check segdup 
   assemblytics = removeSegdup(assemblytics, assemblytics.gr, segdup.gr, sv_bl.gr)
@@ -97,11 +100,25 @@ processAlignment = function(i) {
   
   # Check ngap 
   # Need to define 2 types of ngap: ngaps_within and ngaps_at_boundaries
-  ngapFile = read.table(paste0(ngap, "/",sample,"_pseudohap",haplo,".ngaps.bed"), stringsAsFactors = F)
-  colnames(ngapFile) = c("ref_assm", "start", "end", "ngap_size")
-  ngap.gr = makeGRangesFromDataFrame(ngapFile, seqnames.field = "ref_assm", start.field = "start", end.field = "end")
-  print(3)
+  if (haplo == "unphased") {
+    ngapFileName = paste0(ngap, "/",sample, ".ngaps.bed")
+    ngapFileSize = file.info(ngapFileName)$size
+    
+    if (ngapFileSize==0){
+      ngapFile = NULL
+    } else {
+      ngapFile = read.table(ngapFileName, stringsAsFactors = F)
+    }
+  } else {
+    ngapFileName = paste0(ngap, "/",sample,"_pseudohap",haplo,".ngaps.bed")
+    ngapFile = read.table(ngapFileName, stringsAsFactors = F)
+  }
   
+  if (!is.null(ngapFile)){
+    colnames(ngapFile) = c("ref_assm", "start", "end", "ngap_size")
+    ngap.gr = makeGRangesFromDataFrame(ngapFile, seqnames.field = "ref_assm", start.field = "start", end.field = "end")
+  }
+
   # Now we need to overlap assemblytics and ngap
   assemblytics$assm_id = str_split_fixed(assemblytics$asm_coords, ":|-", 4)[,1]
   assemblytics$assm_start = as.numeric(str_split_fixed(assemblytics$asm_coord, ":|-", 4)[,2]) 
@@ -111,13 +128,22 @@ processAlignment = function(i) {
   assemblytics$boundary_right_start = assemblytics$assm_end - 10
   assemblytics$boundary_right_end = assemblytics$assm_end + 10
   
-  assemblytics_ngap.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "assm_id", start.field = "assm_start", end.field = "assm_end")
-  assemblytics_boundary_left.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "assm_id", start.field = "boundary_left_start", end.field = "boundary_left_end")
-  assemblytics_boundary_right.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "assm_id", start.field = "boundary_right_start", end.field = "boundary_right_end")
-  
-  #print("Overlapping Ngap file")
-  
-  assemblytics = overlapNgap(assemblytics, ngapFile, assemblytics_ngap.gr, ngap.gr, assemblytics_boundary_left.gr, assemblytics_boundary_right.gr)
+  if (is.null(ngapFile)){
+    
+    assemblytics$ngap = 0
+    assemblytics$ngap_boundaries = 0
+    assemblytics$ngap_boundaries_size_left = 0
+    assemblytics$ngap_boundaries_size_right = 0
+    
+  } else {
+    
+    assemblytics_ngap.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "assm_id", start.field = "assm_start", end.field = "assm_end")
+    assemblytics_boundary_left.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "assm_id", start.field = "boundary_left_start", end.field = "boundary_left_end")
+    assemblytics_boundary_right.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "assm_id", start.field = "boundary_right_start", end.field = "boundary_right_end")
+    
+    # Actual overlap of Ngap
+    assemblytics = overlapNgap(assemblytics, ngapFile, assemblytics_ngap.gr, ngap.gr, assemblytics_boundary_left.gr, assemblytics_boundary_right.gr)
+  }
   
   # Remove redundant insertions
   assemblytics = removeRedundantInsertion(assemblytics)
@@ -125,8 +151,7 @@ processAlignment = function(i) {
   # Remove if ngap size is large and has no unique sequence
   #assemblytics = assemblytics[(assemblytics$ngap == 0) | (assemblytics$ngap > 10 & assemblytics$ngap < 1000 & assemblytics$q_gap_size - assemblytics$ngap >= 150) |(assemblytics$ngap >= 1000 & assemblytics$q_gap_size - assemblytics$ngap >= 1000 & assemblytics$BN_size > 0),]
   assemblytics = assemblytics[(assemblytics$ngap == 0) | (assemblytics$ngap > 0 & (assemblytics$q_gap_size - assemblytics$ngap >= 50) & assemblytics$ngap < 10000),]
-  print(4)
-  
+
   # Remove unnecessary columns, add sample and haplo info
   assemblytics = assemblytics[order(assemblytics$ref_chr, assemblytics$ref_start),-which(names(assemblytics) %in% c("assemblytics_id", "type", "boundary_left_start", "boundary_left_end", "boundary_right_start", "boundary_right_end"))]
   assemblytics$sample = sample
@@ -140,14 +165,12 @@ processAlignment = function(i) {
   }
   assemblytics$adjusted_assm_start = NA
   assemblytics$adjusted_assm_end = NA
-  print(5)
-  
+
   # **2. Split assemblytics into 2 dataframes (negative ref_gap_size and positive ref_gap_size)
   # we will only use the adjusted_coordinates column for neg_ref_gap
   neg_ref_gap = assemblytics[assemblytics$ref_gap_size<0,]
   pos_ref_gap = assemblytics[assemblytics$ref_gap_size>=0,]
-  print(6)
-  
+
   # **2. Make sure only two sets of coordinates are reported
   # in neg_ref_gap, we need to make sure assm_start and assm_end are found in the adjusted_coordinates column
   neg_ref_gap_list = strsplit(neg_ref_gap$adjusted_coords, ";")
@@ -171,8 +194,7 @@ processAlignment = function(i) {
       else discard = c(discard, s)
   }
   neg_ref_gap = neg_ref_gap[-discard,]
-  print(7)
-  
+
   neg_ref_gap$tmp_s = neg_ref_gap$adjusted_assm_start
   neg_ref_gap$tmp_e = neg_ref_gap$adjusted_assm_end
   
@@ -183,8 +205,7 @@ processAlignment = function(i) {
   # **3. If pos_ref_gap, adjusted_assm_start and adjusted_assm_end are identical to assm_start and assm_end
   pos_ref_gap$adjusted_assm_start = pos_ref_gap$assm_start
   pos_ref_gap$adjusted_assm_end = pos_ref_gap$assm_end
-  print(8)
-  
+
   # **4. Put the two lists together
   assemblytics = rbind.data.frame(pos_ref_gap, neg_ref_gap, stringsAsFactors = F)
   

@@ -1,8 +1,13 @@
+#!/bin/bash
+
 # Define variables
 CORES="$1"
-WORKDIR="$2"
-ASSEMBLYTICS="$3"
-METADATA="$4"
+MODE="$2"
+WORKDIR="$3"
+ASSEMBLYTICS="$4"
+NGAPDIR="$5"
+BN_SV7989="$6"
+EEE_VCF="$7"
 
 cd "$WORKDIR"
 
@@ -39,32 +44,45 @@ if [ ! -d ./discovery/final_fasta/repeats ]; then
     mkdir ./discovery/final_fasta/repeats
 fi
 
+# Modify sample metadata depending on the MODE variable
+if [ "$MODE" = "ALL" ]; then
+    cat "${WORKDIR}/10X_sample_metadata.txt" "${WORKDIR}/PB_sample_metadata.txt" > "${WORKDIR}/TMP_sample_metadata.txt"
+elif [ "$MODE" = "10X" ]; then
+    cp "${WORKDIR}/10X_sample_metadata.txt" "${WORKDIR}/TMP_sample_metadata.txt"
+elif [ "$MODE" = "PB" ]; then
+    cp "${WORKDIR}/PB_sample_metadata.txt" "${WORKDIR}/TMP_sample_metadata.txt"
+else 
+    echo "Error: Incorrect MODE selection"
+    exit 1
+fi
+    
+# Calculate ngap size
+# This is memory intensive, adjust cores accordingly
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Calculating assembly ngaps"
+bash /media/KwokRaid05/karen/new_ref/scripts/calc_ngaps_assembly.sh "$WORKDIR" "$NGAPDIR" 4
+
 # Gather fasta indexes for contig length info
 # This outputs "$WORKDIR"/discovery/supernova_idx.txt
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Gathering supernova fasta indexes"
-bash ./scripts/compile_fasta_idx.sh "$WORKDIR" "$METADATA"    
-
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Gathering supernova fasta sequence lengths"
+bash ./scripts/compile_fasta_idx.sh "$WORKDIR"
+    
 # Run assemblytics
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running assemblytics between alignment"
-bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS"
-
+bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS" 
+    
 # Process assemblytics output
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Compiling assemblytics output"
-Rscript ./scripts/compile_assemblytics.R -t "$CORES" -d "$WORKDIR" \
-    -b /media/KwokRaid02/karen/database/BN_SV7989/ \
-    -n /media/KwokRaid04/assembly_ngap/ 
+Rscript ./scripts/compile_assemblytics.R -t "$CORES" -d "$WORKDIR" -b "$BN_SV7989" -n "$NGAPDIR"
     
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Combining the two pseudohaplotypes"
-Rscript ./scripts/compile_assemblytics_2.R  -d "$WORKDIR" # combine pseudohaplotypes
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Combining individual files"
+Rscript ./scripts/compile_assemblytics_2.R  -d "$WORKDIR"
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Choosing representative insertion sequences"
-Rscript ./scripts/find_most_representative_seq_assemblytics.R -d "$WORKDIR" \
-    -v /media/KwokRaid05/karen/new_ref/published_genomes/EEE/EEE_SV-Pop_1.ALL.sites.20181204.vcf
+Rscript ./scripts/find_most_representative_seq_assemblytics.R -d "$WORKDIR" -v "$EEE_VCF" -t "$CORES"
 
 # Extract sequences for TRF
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extract the insertion sequences"
-bash ./scripts/retrieve_representative_seq.sh \
-    assemblytics_representative_seq "$WORKDIR"/discovery
+bash ./scripts/retrieve_representative_seq.sh assemblytics_representative_seq "$WORKDIR"
 
 # Run TRF 
 cd ./discovery/final_fasta

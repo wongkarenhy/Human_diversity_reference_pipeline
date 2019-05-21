@@ -37,8 +37,8 @@ vcf = read.table(vcf, stringsAsFactors = F)
 colnames(vcf) = c("CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT", "CHM1", "CHM13", "HG00514", "HG00733", "NA12878", "HG02818", "NA19434", "HG01352", "HG02059", "NA12878", "HG04217", "HG02106", "HG00268", "HX1")
   
 #assemblytics_combined_per_chr = assemblytics_combined[assemblytics_combined$ref_chr==CHR,] # just to make testing faster
-metadata = read.table(paste0(dir, "/ALL_sample_metadata.txt"), stringsAsFactors = F)
-colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population")
+metadata = read.table(paste0(dir, "/TMP_sample_metadata.txt"), stringsAsFactors = F)
+colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population", "source")
 
 # Convert the validated column to a numeric factor
 assemblytics_combined$validated[is.na(assemblytics_combined$validated)] = -1
@@ -96,7 +96,7 @@ representative_seq$ref_start = representative_seq$ref_start - 1
 
 # Add contig lenth to avoid "truncated seq" problem in the next step 
 # Read file containing contig length info
-fai = fread(paste0(dir,"/discovery/supernova_idx.txt"), stringsAsFactors = F)
+fai = fread(paste0(dir,"/discovery/tmp_idx.txt"), stringsAsFactors = F)
 colnames(fai) = c("assm_id", "contig_length", "sample", "haplo")
 
 representative_seq = merge(representative_seq, fai, all.x = T, by.x = c("assm_id", "sample", "haplo"), by.y = c("assm_id", "sample", "haplo"))

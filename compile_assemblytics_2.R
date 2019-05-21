@@ -22,8 +22,8 @@ dir = opt$dir
 
 source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 
-metadata = read.table(paste0(dir, "/ALL_sample_metadata.txt"), stringsAsFactors = F)
-colnames(metadata) = c("SAMPLE", "SEX", "FASTQ_DIR", "LONGRANGER_DIR", "ASSM_DIR", "BN_DIR", "ENZYME", "SUPERNOVA_VER", "ALT_NAME", "NUCMER_DIR", "POPULATION")
+metadata = read.table(paste0(dir, "/TMP_sample_metadata.txt"), stringsAsFactors = F)
+colnames(metadata) = c("SAMPLE", "SEX", "FASTQ_DIR", "LONGRANGER_DIR", "ASSM_DIR", "BN_DIR", "ENZYME", "SUPERNOVA_VER", "ALT_NAME", "NUCMER_DIR", "POPULATION", "SRC")
 
 file_path = paste0(dir, "/discovery/raw/")
 file_list = list.files(file_path, pattern = "raw_results.txt")
@@ -52,9 +52,6 @@ for (i in file_list){
 # Turn off scientific notation
 options(scipen=999)
 write.table(assemblytics_ALL, paste0(dir, "/discovery/assemblytics_combined_results.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
-
-
-
 
 
 
