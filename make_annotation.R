@@ -148,7 +148,7 @@ for (i in unique(repeatMasker$name)){
 # Make sure the keys are of the same class
 repeats$key_id = as.character(repeats$key_id)
 repeats$key_start = as.numeric(repeats$key_start)
-seq$aassm_id = as.character(seq$aassm_id)
+seq$assm_id = as.character(seq$assm_id)
 seq$adjusted_assm_start = as.numeric(seq$adjusted_assm_start)
 # Merge repeats dataframe back to seq
 seq_merged = merge(seq, repeats, all.x = T, by.x = c("assm_id", "adjusted_assm_start"), by.y = c("key_id", "key_start"))
