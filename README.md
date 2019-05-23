@@ -33,15 +33,26 @@ GWAS file: downloaded from the GWAS catalog website but the file is updated week
 2. assemblytics_representative_seq_conf_annotated.txt <br>
 
 
-# Usage:
+# Usage:<br>
+bash pipeline.sh CORES MODE WORKDIR ASSEMBLYTICS_DIR NGAPDIR BN_SV7989_DIR EEE_VCF_DIR <br>
+**Example command:** <br>
+bash /media/KwokRaid05/karen/new_ref4/scripts/pipeline.sh 32 10X \ <br>
+    /media/KwokRaid05/karen/new_ref4 \ <br>
+    /media/KwokRaid02/karen/software/assemblytics_WM/ \ <br>
+    /media/KwokRaid04/assembly_ngap/ \ <br>
+    /media/KwokRaid02/karen/database/BN_SV7989/ \ <br>
+    /media/KwokRaid05/karen/new_ref/published_genomes/EEE/EEE_SV-Pop_1.ALL.sites.20181204.vcf <br>
+
+
+MODE can be 10X, PB, or ALL <br> 
 Put segdups.bedpe and sv_blacklist.bed in WORKDIR <br>
 Open make_annotation.R and change all the database paths under "# Read input sequences and databases"
 Old reference FASTA header has to follow EXACTLY the following format: <br>
 **>chrX$** (no space or tab allowed) <br>
 
 **Input to part 1:**<br>
-1. Metadata file
-2. Supernova pseudohaplotype unzipped FASTA files (2 files per sample)
+1. Metadata file (Filename has to be **10X_sample_metadata.txt** for 10X data and **PB_sample_metadata.txt** for PB)
+2. Supernova pseudohaplotype unzipped FASTA files (2 files per sample if 10X data)
 3. Nucmer delta files (2 files per sample)
 4. Ngap bed file (2 files per sample)
 5. BioNano SV smap (1 file per sample)
@@ -60,6 +71,7 @@ Old reference FASTA header has to follow EXACTLY the following format: <br>
 9. ALT_SAMPLE_NAME *
 10. NUCMER_DIR 
 11. POPULATION 
+12. SRC (This can either be 10X or PB) 
 
 # Part 0.2
 ## Run supernova to generate de novo assemblies (FASTA format) <br>
