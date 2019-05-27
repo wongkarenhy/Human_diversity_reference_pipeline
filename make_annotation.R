@@ -166,9 +166,7 @@ write.table(seq_merged, paste0(dir, "/discovery/assemblytics_representative_seq_
 
 # Define a conf list for constructing the reference
 conf = seq_merged[seq_merged$ngap_boundaries=="no" & seq_merged$N_perct<0.9,]
-conf = conf[(conf$sample_count>1 | (conf$sample_count==1 & conf$ngap==0 & conf$PB_validated==1)), ]
-# Remove if sample_count is 1 but haplo is "unphased"
-conf = conf[-which(conf$sample_count==1 & conf$haplo=="unphased"), ]
+conf = conf[(conf$sample_count>1 | (conf$sample_count==1 & conf$ngap==0 & conf$PB_validated==1 & conf$haplo!="unphased")), ]
 write.table(conf, paste0(dir, "/discovery/assemblytics_representative_seq_conf_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
 
