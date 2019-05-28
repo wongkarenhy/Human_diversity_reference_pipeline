@@ -53,7 +53,7 @@ colnames(gencodeV29_nrRNA) = c("chr", "start", "end")
 colnames(gencodeV29_pseudo) = c("chr", "start", "end")
 gwas = gwas[,c(2:4,11:12,15,18)]
 colnames(gwas) = c("chr", "start", "end", "pheno", "populations", "gene", "Pval")
-colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population")
+colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population", "source")
 repeatMasker = repeatMasker[,c(5:7,10:11)]
 colnames(repeatMasker) = c("name", "start", "end", "type", "group")
 colnames(trf) = c("query", "len", "N_count", "N_perct")
@@ -164,11 +164,17 @@ seq_merged = seq_merged[,c(3:17,1,18:23,2,24:74)]
 # Write the annotated output
 write.table(seq_merged, paste0(dir, "/discovery/assemblytics_representative_seq_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
-# Define a conf list for constructing the reference
-conf = seq_merged[seq_merged$ngap_boundaries=="no" & seq_merged$N_perct<0.9,]
+# Define 2 conf lists for constructing the reference
+conf = seq_merged[seq_merged$ngap_boundaries=="no",]
 conf = conf[(conf$sample_count>1 | (conf$sample_count==1 & conf$ngap==0 & conf$PB_validated==1 & conf$haplo!="unphased")), ]
-write.table(conf, paste0(dir, "/discovery/assemblytics_representative_seq_conf_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
+# First one N_perct has to be less than 90%
+conf1 = conf[conf$N_perct<0.9,]
+write.table(conf1, paste0(dir, "/discovery/assemblytics_representative_seq_conf_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
+
+# Second one edge score for start and end must be <1
+conf2 = conf[(conf$edge_start<1 & conf$edge_end<1), ]
+write.table(conf2, paste0(dir, "/discovery/assemblytics_representative_seq_conf2_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
 
 # ------------------------------------------------------------ Part 2: Ngap filling -----------------------------------------------------------
