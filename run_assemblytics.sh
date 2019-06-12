@@ -59,3 +59,6 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
 done < "${workdir}/TMP_sample_metadata.txt"    
         
 wait
+
+# remove intermediate files
+rm *.delta.gz *.coords.csv *coords.tab 

@@ -1,13 +1,26 @@
 #!/bin/bash
 
-# Define variables
-CORES="$1"
-MODE="$2"
-WORKDIR="$3"
-ASSEMBLYTICS="$4"
-NGAPDIR="$5"
-BN_SV7989="$6"
-EEE_VCF="$7"
+usage() {
+    NAME=$(basename $0)
+    cat <<EOF
+EOF
+Usage:
+  ${NAME} 
+Please edit reference_config.sh accordingly before each run. The config file, 
+along with 10X_sample_metadata.txt, PB_sample_metadata.txt, segdups.bedpe, 
+and sv_blacklist.bed must be placed together with this script in WORKDIR.
+
+EOF
+}
+
+## load variables
+if [[ ! -f ./reference_config.sh ]]; then
+ usage
+ echo "Error: Missing configuration file (reference_config.sh) !"
+ exit 1
+fi
+
+source ./reference_config.sh
 
 cd "$WORKDIR"
 
@@ -24,6 +37,10 @@ set -e
 pipeline(){
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "#> START: " $0 
 
+if [ -d ./tmp ]; then
+    rm ./tmp
+fi    
+    
 if [ ! -d ./assemblytics ]; then
     mkdir ./assemblytics
 fi
@@ -68,18 +85,32 @@ bash ./scripts/compile_fasta_idx.sh "$WORKDIR"
     
 # Run assemblytics
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running assemblytics between alignment"
-bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS" 
+bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS"
     
 # Process assemblytics output
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Compiling assemblytics output"
-Rscript ./scripts/compile_assemblytics.R -t "$CORES" -d "$WORKDIR" -b "$BN_SV7989" -n "$NGAPDIR"
+Rscript ./scripts/process_assemblytics.R -t "$CORES" -d "$WORKDIR" -b "$BN_SV7989" -n "$NGAPDIR"
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Combining individual files"
-Rscript ./scripts/compile_assemblytics_2.R  -d "$WORKDIR"
+Rscript ./scripts/combine_individual_assemblytics.R -d "$WORKDIR"
+    
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Grouping insertions based on overlapping reference coordinates"
+Rscript ./scripts/group_insertions.R -d "$WORKDIR"    
+    
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Calculating edge score for each component"
+Rscript ./scripts/calc_edge.R -d "$WORKDIR"
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Choosing representative insertion sequences"
-Rscript ./scripts/find_most_representative_seq_assemblytics.R -d "$WORKDIR" -v "$EEE_VCF" -t "$CORES"
-
+python2.7 ./scripts/multialign.py \
+    -i "$WORKDIR"/discovery/assemblytics_combined_results_with_component_group.txt \
+    -r "$HG38_REF" \
+    -t "$WORKDIR"/tmp/ \
+    -m "$WORKDIR"/TMP_sample_metadata.txt \
+    -n 48
+    
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Processing multiple alignment results"
+Rscript ./scripts/process_multi_results.R -d "$WORKDIR"
+    
 # Extract sequences for TRF
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extract the insertion sequences"
 bash ./scripts/retrieve_representative_seq.sh assemblytics_representative_seq "$WORKDIR"
@@ -89,20 +120,20 @@ cd ./discovery/final_fasta
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running tandem repeat finder (TRF)"
 trf assemblytics_representative_seq.fa 2 7 7 80 10 50 2000 -f -m -h -d -ngs > trf_rep_seq.out
     
-# Ask what percent of the insertions are masked
+# Ask what percent of the insertions are masked by TRF
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Calculating percent masked bases"
 seqtk comp assemblytics_representative_seq.fa.2.7.7.80.10.50.2000.mask | \
     awk '{print $1, $2, $9, $9/$2}' > trf_rep_seq_count.txt 
 seqtk comp assemblytics_representative_seq.fa | awk '{print $1, $2, $9, $9/$2}' > rep_seq_count.txt
 
-# Do repeatmasking 
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running repeatMasker"
-RepeatMasker --species human -pa 16 -ace -html -dir ./repeats assemblytics_representative_seq.fa
-
+# Extract repeatMasking results 
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extracting repeatMasker results"
+Rscript ./scripts/extract_repeatmasking_for_rep_seq.R -d "$WORKDIR" -t "$CORES"
+    
 # This script annotates all the raw insertions and filter for a set of high confident SVs
 cd "$WORKDIR"
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Annotating insertionns and choosing a high confident set"
-Rscript ./scripts/make_annotation.R -d "$WORKDIR"
+Rscript ./scripts/make_annotation.R -d "$WORKDIR" -t "$CORES" -r "$REFFLAT" -g "$GWAS"
 
 } # end of pipeline
 
