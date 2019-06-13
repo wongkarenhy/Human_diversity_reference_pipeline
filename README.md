@@ -50,7 +50,8 @@ File naming format: OUT_$SAMPLE_pseudohap2.1.delta AND OUT_$SAMPLE_pseudohap2.2.
 **BioNano SV smap** <br>
 Rerun Bionano's run_SV.py for all the samples. <br>
 Make sure all smaps are stored in one directory <br>
-File naming format: $SAMPLE.smap 
+File naming format: $SAMPLE.smap <br>
+Append BN enzyme name to the end of every line in smap <br>
 
 ## Usage:<br>
 Place reference_config.sh in WORKDIR and change all the variables accordingly <br>
