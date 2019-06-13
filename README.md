@@ -2,8 +2,10 @@
 
 ## Required software:
 RepeatMasker version open-4.0.7 (Dfam v2.0) <br>
-trf (tandem repeat finder)<br>
-seqtk <br>
+trf (tandem repeat finder) <br>
+seqtk v1.0-r82-dirty <br>
+muscle v3.8.31 <br>
+samtools v1.9 <br>
 
 ## Required R libraries:
 stringr <br>
@@ -11,6 +13,7 @@ GenomicRanges<br>
 optparse <br>
 igraph <br>
 data.table <br>
+parallel <br>
 
 ## Annotation databases:
 REFFLAT file: http://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/refFlat.txt.gz (Version 03312019)<br>
