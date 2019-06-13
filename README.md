@@ -20,7 +20,7 @@ REFFLAT file: http://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/refFlat.tx
 GWAS file: downloaded from the GWAS catalog website but the file is updated weekly. Version used: 02032019
 
 ## Other input requirements:
-1. Metadata files (Filename has to be **10X_sample_metadata.txt** for 10X data and **PB_sample_metadata.txt** for PB)
+1. Metadata file (Filename has to be **sample_metadata.txt**)
 2. Supernova pseudohaplotype unzipped FASTA files (2 files per sample if 10X data)
 3. Nucmer delta files (2 files per sample)
 4. BioNano SV smap (1 file per sample)
