@@ -3,6 +3,7 @@
 ## Required software:
 RepeatMasker version open-4.0.7 (Dfam v2.0) <br>
 trf (tandem repeat finder)<br>
+seqtk <br>
 
 ## Required R libraries:
 stringr <br>
