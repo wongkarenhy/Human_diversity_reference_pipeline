@@ -39,6 +39,7 @@ The metadata file should contain the following columns (* *not actually used by 
 10. NUCMER_DIR 
 11. POPULATION 
 12. SRC (This can either be 10X or PB) 
+13. PROJECT * (samples might have come from different projects)
 
 **Supernova pseudohaplotype unzipped FASTA files** <br>
 File naming format: $SAMPLE_pseudohap2.1.fasta AND $SAMPLE_pseudohap2.2.fasta
