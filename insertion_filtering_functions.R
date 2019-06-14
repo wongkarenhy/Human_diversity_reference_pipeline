@@ -383,7 +383,11 @@ checkResAssemblyticsComponentConcord = function(assemblytics, res){
     assemblytics = assemblytics[-discard,]
     
   }
-
+  
+  # if (any(unique(assemblytics$component) != unique(res$component))){
+  #     stop("Component not identical between assemblytics and multiple alignment results")
+  # }
+  
   return(assemblytics)
 
 }

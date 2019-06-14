@@ -80,7 +80,7 @@ source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 
 # read sample metadata (so we only use samples in the metadata)
 metadata = read.table(paste0(dir, "/TMP_sample_metadata.txt"), stringsAsFactors = F)
-colnames(metadata) = c("SAMPLE", "SEX", "FASTQ_DIR", "LONGRANGER_DIR", "ASSM_DIR", "BN_DIR", "ENZYME", "SUPERNOVA_VER", "ALT_NAME", "NUCMER_DIR", "POPULATION", "SRC")
+colnames(metadata) = c("SAMPLE", "SEX", "FASTQ_DIR", "LONGRANGER_DIR", "ASSM_DIR", "BN_DIR", "ENZYME", "SUPERNOVA_VER", "ALT_NAME", "NUCMER_DIR", "POPULATION", "SRC", "PROJECT")
 
 # grab all files in the assemblytics output directory
 assemblytics_list = list.files(paste0(dir, "/assemblytics/"), pattern = "filtered_variants.bed")
@@ -227,5 +227,6 @@ processAlignment = function(i) {
 }
 
 mclapply(assemblytics_list, processAlignment, mc.cores = threads)
+
 #mclapply(assemblytics_list[73], processAlignment, mc.cores = threads)
 

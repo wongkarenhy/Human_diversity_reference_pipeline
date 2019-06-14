@@ -5,7 +5,7 @@ if [ -f "$WORKDIR"/discovery/tmp_idx.txt ]; then
     rm "$WORKDIR"/discovery/tmp_idx.txt
 fi
 
-while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNOVA_VER ALT_NAME NUCMER_DIR POPULATION SRC; do
+while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNOVA_VER ALT_NAME NUCMER_DIR POPULATION SRC PROJECT; do
     
     if [ "$SRC" = "10X" ]; then
     

@@ -55,11 +55,11 @@ assemblytics_combined = fread(paste0(dir, "/discovery/assemblytics_combined_resu
 
 # read metadata
 metadata = read.table(paste0(dir, "/TMP_sample_metadata.txt"), stringsAsFactors = F)
-colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population", "source")
+colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population", "source", "project")
 
 # add 0.5 to each end before creating grange objects
 assemblytics_combined$ref_start = assemblytics_combined$ref_start-0.5
-assemblytics_combined$ref_end = assemblytics_combined$ref_start+0.5
+assemblytics_combined$ref_end = assemblytics_combined$ref_end+0.5
 
 # find overlapping reference ranges
 assemblytics.gr = makeGRangesFromDataFrame(assemblytics_combined, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end")
@@ -89,7 +89,7 @@ assemblytics_combined = assemblytics_combined[order(assemblytics_combined$compon
 
 # correct ref_start and ref_end values
 assemblytics_combined$ref_start = assemblytics_combined$ref_start+0.5
-assemblytics_combined$ref_end = assemblytics_combined$ref_start-0.5
+assemblytics_combined$ref_end = assemblytics_combined$ref_end-0.5
 
 options(scipen=999)
 write.table(assemblytics_combined, paste0(dir, "/discovery/assemblytics_combined_results_with_component_group.txt"), col.names = T, row.names = F, quote = F, sep = '\t')

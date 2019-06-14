@@ -47,22 +47,22 @@ processRepeatMasker = function(i) {
 #for (i in 1:nrow(rep_seq)){
     
     print(i)
+  
     comp = rep_seq$component[i]
     id = rep_seq$INS_id[i]
     
-    repeatRes = fread(paste0(dir, "/tmp/",comp,"/",comp,".fa.out"), stringsAsFactors = F, fill=TRUE)
-    
-    if (nrow(repeatRes)==0){
+    repeatRes <- try(read.table(paste0(dir, "/tmp/",comp,"/",comp,".fa.out"), stringsAsFactors = F, skip = 3, comment.char = "*"), silent = T)
+
+    if (inherits(repeatRes, 'try-error')){
         repeat_class = NA
+    
+    #repeatRes = read.table(paste0(dir, "/tmp/",comp,"/",comp,".fa.out"), stringsAsFactors = F, skip = 3, comment.char = "*")
+    
+    #repeatRes = fread(paste0(dir, "/tmp/",comp,"/",comp,".fa.out"), stringsAsFactors = F, fill=TRUE, sep=' ')
+    
+    #if (nrow(repeatRes)==0){
+    #     repeat_class = NA
     } else{
-      
-      # drop the last column
-      if (ncol(repeatRes) == 16){
-          repeatRes = repeatRes[,-16]
-      }
-      
-      # drop the first three lines
-      repeatRes = repeatRes[4:nrow(repeatRes),]
       
       # add a header
       colnames(repeatRes) = c("bit", "perc_div", "perc_del", "perc_ins", "query", "begin", "end", "q_left", "strand", "matching_repeat", "repeat_class", "begin_rep", "end_rep", "repet_left", "ID")
@@ -86,6 +86,14 @@ processRepeatMasker = function(i) {
     return(repeat_class)
 }
 repeat_class = mclapply(1:nrow(rep_seq), processRepeatMasker, mc.cores = threads)
+#repeat_class = mclapply(1:100, processRepeatMasker, mc.cores = threads)
+
+job_err = repeat_class[1:nrow(rep_seq)]
+stopifnot(length(which(grepl("Error", job_err)))==0)
+# if (length(which(grepl("Error", job_err)))>0){
+#   print("should quit")
+#   quit(status=1)
+# }
 
 comp_repeat = cbind.data.frame(rep_seq$component, unlist(repeat_class), stringsAsFactors = F)
 colnames(comp_repeat) = c("component", "repeat_class")

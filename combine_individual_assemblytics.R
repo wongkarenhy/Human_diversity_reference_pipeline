@@ -47,7 +47,7 @@ source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 
 # read metadata 
 metadata = read.table(paste0(dir, "/TMP_sample_metadata.txt"), stringsAsFactors = F)
-colnames(metadata) = c("SAMPLE", "SEX", "FASTQ_DIR", "LONGRANGER_DIR", "ASSM_DIR", "BN_DIR", "ENZYME", "SUPERNOVA_VER", "ALT_NAME", "NUCMER_DIR", "POPULATION", "SRC")
+colnames(metadata) = c("SAMPLE", "SEX", "FASTQ_DIR", "LONGRANGER_DIR", "ASSM_DIR", "BN_DIR", "ENZYME", "SUPERNOVA_VER", "ALT_NAME", "NUCMER_DIR", "POPULATION", "SRC", "PROJECT")
 
 # declare assemblytics path
 assemblytics_path = paste0(dir, "/discovery/raw/")

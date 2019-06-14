@@ -61,7 +61,7 @@ assemblytics = fread(paste0(dir, "/discovery/assemblytics_combined_results_with_
 
 # read sample metadata
 metadata = read.table(paste0(dir, '/TMP_sample_metadata.txt'), stringsAsFactors = F)
-colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population", "source")
+colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population", "source", "project")
 
 # make sure all components in res are also in assemblytics
 assemblytics = checkResAssemblyticsComponentConcord(assemblytics, res)
@@ -72,7 +72,7 @@ assm_tbl = c(table(assemblytics$component))
 start_counter = 1
 representative_df = NULL
 for (i in 1:length(assm_tbl)){
-
+#for (i in 1:7006){
   end = start_counter + assm_tbl[i] - 1
 
   representative_df = findRepresentativeSeq(start_counter, end)

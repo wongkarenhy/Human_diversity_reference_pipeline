@@ -76,11 +76,15 @@ colnames(gwas) = c("chr", "start", "end", "pheno", "populations", "gene", "Pval"
 
 # read sample metadata
 metadata = read.table(paste0(dir, "/TMP_sample_metadata.txt"), stringsAsFactors = F)
-colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population", "source")
+colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzyme", "supernova_ver", "alt_name", "nucmer", "population", "source", "project")
 
 # read trf output
 trf = fread(paste0(dir ,"/discovery/final_fasta/trf_rep_seq_count.txt"), stringsAsFactors = F)
 colnames(trf) = c("query", "len", "TRF_N_count", "TRF_N_perct")
+
+# read gc content 
+gc = fread(paste0(dir, "/discovery/final_fasta/gc_count.txt"), stringsAsFactors = F)
+colnames(gc) = c("query", "gc_perct")
 
 # read repeatmasker output
 repeats = fread(paste0(dir, "/discovery/comp_repeat.txt"), stringsAsFactors = F)
@@ -118,6 +122,11 @@ rep_seq$gwas_Pval[seq_gwas_ov@from] = gwas$Pval[seq_gwas_ov@to]
 # Calculate distance to the nearest gene
 min_dist_to_exon = NULL
 min_dist_to_exon = mclapply(1:nrow(rep_seq), calc_min_dist_to_exon, mc.cores = threads)
+
+# check if there're any error messages
+job_err = min_dist_to_exon[1:nrow(rep_seq)]
+stopifnot(length(which(grepl("Error", job_err)))==0)
+
 rep_seq$min_dist_to_exon = unlist(min_dist_to_exon)
 
 # Do a chi-sq analysis to see if the population distributions are uneven (for each insertion)
@@ -134,6 +143,11 @@ rep_seq$repeat_class = repeats$repeat_class
 #add trf annotation
 rep_seq$key = paste0(rep_seq$assm_id,":", rep_seq$adjusted_assm_start,"-",rep_seq$adjusted_assm_end)
 rep_seq = merge(rep_seq, trf, by.x = "key", by.y = "query")
+rep_seq$TRF_N_count = ifelse(rep_seq$ngap==0, rep_seq$TRF_N_count, NA)
+rep_seq$TRF_N_perct = ifelse(rep_seq$ngap==0, rep_seq$TRF_N_perct, NA)
+
+# add gc%
+rep_seq = merge(rep_seq, gc, by.x = "key", by.y = "query")
 
 # remove key column
 rep_seq = rep_seq[,2:ncol(rep_seq)]

@@ -63,16 +63,16 @@ fi
 
 # Modify sample metadata depending on the MODE variable
 if [ "$MODE" = "ALL" ]; then
-    cat "${WORKDIR}/10X_sample_metadata.txt" "${WORKDIR}/PB_sample_metadata.txt" > "${WORKDIR}/TMP_sample_metadata.txt"
+    cp "${WORKDIR}/sample_metadata.txt" "${WORKDIR}/TMP_sample_metadata.txt"
 elif [ "$MODE" = "10X" ]; then
-    cp "${WORKDIR}/10X_sample_metadata.txt" "${WORKDIR}/TMP_sample_metadata.txt"
+    grep -w 10X "${WORKDIR}/sample_metadata.txt" > "${WORKDIR}/TMP_sample_metadata.txt"
 elif [ "$MODE" = "PB" ]; then
-    cp "${WORKDIR}/PB_sample_metadata.txt" "${WORKDIR}/TMP_sample_metadata.txt"
+    grep -w PB "${WORKDIR}/sample_metadata.txt" > "${WORKDIR}/TMP_sample_metadata.txt"
 else 
     echo "Error: Incorrect MODE selection"
     exit 1
 fi
-    
+
 # Calculate ngap size
 # This is memory intensive, adjust cores accordingly
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Calculating assembly ngaps"
