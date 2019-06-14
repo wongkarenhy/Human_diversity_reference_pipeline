@@ -157,10 +157,14 @@ write.table(rep_seq, paste0(dir, "/discovery/assemblytics_representative_seq_ann
 
 # ------------------------------------------------ Part 2: Choose confident insertions -----------------------------------------------------
 
-conf = rep_seq[rep_seq$ngap_boundaries!="yes" & rep_seq$edge_start<1 & rep_seq$edge_end<1,]
+conf = rep_seq[rep_seq$ngap_boundaries!="yes" & rep_seq$edge_start<1 & rep_seq$edge_end<1 & rep_seq$ngap<=10,]
 TR_discard = which(conf$TRF_N_perct>0.9 & conf$sample_perct<0.9)
 small_variant_discard = which(conf$insert_size<50 & conf$sample_perct<0.5)
-conf = conf[-c(unique(TR_discard, small_variant_discard)),]
+disc = c(unique(TR_discard, small_variant_discard))
+
+if (length(disc)>=1){
+  conf = conf[-disc,]
+}
 
 write.table(conf, paste0(dir, "/discovery/assemblytics_representative_seq_conf_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
