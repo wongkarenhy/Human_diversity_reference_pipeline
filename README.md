@@ -62,6 +62,9 @@ Hg38 reference FASTA header has to follow EXACTLY the following format: <br>
 **To execute the pipeline, run:** <br>
 bash pipeline.sh <br>
 
+**To make the reference, run:** <br>
+bash make_reference.sh <br>
+
 **Pipeline input/output directories**<br>
 ├── 10X_sample_metadata.txt --> **pipeline input**<br>
 ├── assemblytics --> assemblytics output directory <br>
@@ -70,7 +73,7 @@ bash pipeline.sh <br>
 │   ├── assemblytics_combined_results_with_component_group.txt<br>
 │   ├── assemblytics_component_edge.txt<br>
 │   ├── assemblytics_representative_seq_annotated.txt<br>
-│   ├── assemblytics_representative_seq_conf_annotated.txt --> input to the make reference pipeline<br>
+│   ├── assemblytics_representative_seq_conf_annotated.txt --> input to the make reference pipeline <br>
 │   ├── assemblytics_representative_seq_annotated.txt<br>
 │   ├── assemblytics_representative_seq_conf_annotated.txt<br>
 │   ├── assemblytics_representative_seq.txt<br>
@@ -78,6 +81,20 @@ bash pipeline.sh <br>
 │   ├── final_fasta<br>
 │   │   ├── assemblytics_representative_seq.fa<br>
 │   │   ├── assemblytics_representative_seq.fa.2.7.7.80.10.50.2000.mask<br>
+│   │   ├── gc_count.txt<br>
+│   │   ├── ref<br>
+│   │   │   ├── hg38_NEW_06112019.fa --> *NEW REFERENCE!* <br>
+│   │   │   ├── hg38_NEW_06112019.fa.amb <br>
+│   │   │   ├── hg38_NEW_06112019.fa.ann <br>
+│   │   │   ├── hg38_NEW_06112019.fa.bwt <br>
+│   │   │   ├── hg38_NEW_06112019.fa.pac <br>
+│   │   │   ├── hg38_NEW_06112019.fa.sa <br>
+│   │   │   ├── ID_key_subsetted.txt<br>
+│   │   │   ├── ID_key.txt<br>
+│   │   │   ├── log.txt<br>
+│   │   │   ├── NEW_06112019.fa<br>
+│   │   │   ├── NEW_06112019_name_changed.fa<br>
+│   │   │   └── record_NEW_06112019.tsv --> *KEEP THIS! Old and new coords are stored here!* <br>
 │   │   ├── repeats<br>
 │   │   ├── rep_seq_count.txt<br>
 │   │   ├── trf_rep_seq_count.txt<br>
