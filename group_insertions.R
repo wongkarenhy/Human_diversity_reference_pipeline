@@ -72,17 +72,17 @@ membership = components(net)$membership
 components_count = count_components(net)
 assemblytics_combined$component = membership # add the component number to each INS
 
-# remove singleton (components with just one sample)
-singleton = names(which(table(assemblytics_combined[,c("component")])==1))
-doubleton = names(which(table(assemblytics_combined[,c("component")])==2))
-doubleton_df = assemblytics_combined[assemblytics_combined$component %in% doubleton,]
-doubleton_df = doubleton_df[order(doubleton_df$component),]
-doubleton_df_odd = doubleton_df[seq(1,nrow(doubleton_df),2),]
-doubleton_df_even = doubleton_df[seq(2,nrow(doubleton_df),2),]
-doubleton_df_odd$even = doubleton_df_even$sample
-# here doubleton is defined as two INS but from the same sample
-doubleton = doubleton_df_odd$component[doubleton_df_odd$sample==doubleton_df_odd$even]
-assemblytics_combined = assemblytics_combined[!(assemblytics_combined$component %in% c(singleton, doubleton)), ]
+# # remove singleton (components with just one sample)
+# singleton = names(which(table(assemblytics_combined[,c("component")])==1))
+# doubleton = names(which(table(assemblytics_combined[,c("component")])==2))
+# doubleton_df = assemblytics_combined[assemblytics_combined$component %in% doubleton,]
+# doubleton_df = doubleton_df[order(doubleton_df$component),]
+# doubleton_df_odd = doubleton_df[seq(1,nrow(doubleton_df),2),]
+# doubleton_df_even = doubleton_df[seq(2,nrow(doubleton_df),2),]
+# doubleton_df_odd$even = doubleton_df_even$sample
+# # here doubleton is defined as two INS but from the same sample
+# doubleton = doubleton_df_odd$component[doubleton_df_odd$sample==doubleton_df_odd$even]
+# assemblytics_combined = assemblytics_combined[!(assemblytics_combined$component %in% c(singleton, doubleton)), ]
 
 # sort by component number before writing an output file
 assemblytics_combined = assemblytics_combined[order(assemblytics_combined$component),]
