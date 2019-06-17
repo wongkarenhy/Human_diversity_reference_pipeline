@@ -20,9 +20,9 @@ if [[ ! -f ./reference_config.sh ]]; then
  exit 1
 fi
 
-source ./reference_config.sh
-
 cd "$WORKDIR"
+
+source ./reference_config.sh
 
 if [ ! -d ./log ]; then
     mkdir ./log
@@ -72,11 +72,11 @@ else
     echo "Error: Incorrect MODE selection"
     exit 1
 fi
-
+    
 # Calculate ngap size
 # This is memory intensive, adjust cores accordingly
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Calculating assembly ngaps"
-bash /media/KwokRaid05/karen/new_ref/scripts/calc_ngaps_assembly.sh "$WORKDIR" "$NGAPDIR" 4
+bash ./scripts/calc_ngaps_assembly.sh "$WORKDIR" "$NGAPDIR" 4
 
 # Gather fasta indexes for contig length info
 # This outputs "$WORKDIR"/discovery/supernova_idx.txt
@@ -95,22 +95,39 @@ echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Combining individual files"
 Rscript ./scripts/combine_individual_assemblytics.R -d "$WORKDIR"
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Grouping insertions based on overlapping reference coordinates"
-Rscript ./scripts/group_insertions.R -d "$WORKDIR"    
+Rscript ./scripts/group_insertions.R -d "$WORKDIR" -t "$CORES"
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Calculating edge score for each component"
 Rscript ./scripts/calc_edge.R -d "$WORKDIR"
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Choosing representative insertion sequences"
-python2.7 ./scripts/multialign.py \
-    -i "$WORKDIR"/discovery/assemblytics_combined_results_with_component_group.txt \
-    -r "$HG38_REF" \
-    -t "$WORKDIR"/tmp/ \
-    -m "$WORKDIR"/TMP_sample_metadata.txt \
-    -n 48
+
+for i in ${CHR}; do
+    
+    python2.7 ./scripts/multialign.py \
+        -i "${WORKDIR}/discovery/assemblytics_combined_results_with_component_group_big_chr${i}.txt" \
+        -r "${HG38_REF}" \
+        -t "${WORKDIR}/tmp/" \
+        -m "${WORKDIR}/TMP_sample_metadata.txt" \
+        -n "${CORES}"
+
+    python2.7 ./scripts/multialign.py \
+        -i "${WORKDIR}/discovery/assemblytics_combined_results_with_component_group_small_chr${i}.txt" \
+        -r "${HG38_REF}" \
+        -t "${WORKDIR}/tmp/" \
+        -m "${WORKDIR}/TMP_sample_metadata.txt" \
+        -n "${CORES}"
+        -a 0
+    
+done
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Processing multiple alignment results"
 Rscript ./scripts/process_multi_results.R -d "$WORKDIR"
-    
+
+# Extract repeatMasking results 
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extracting repeatMasker results"
+Rscript ./scripts/extract_repeatmasking_for_rep_seq.R -d "$WORKDIR" -t "$CORES"
+
 # Extract sequences for TRF
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extract the insertion sequences"
 bash ./scripts/retrieve_representative_seq.sh assemblytics_representative_seq "$WORKDIR"
@@ -124,17 +141,20 @@ trf assemblytics_representative_seq.fa 2 7 7 80 10 50 2000 -f -m -h -d -ngs > tr
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Calculating percent masked bases"
 seqtk comp assemblytics_representative_seq.fa.2.7.7.80.10.50.2000.mask | \
     awk '{print $1, $2, $9, $9/$2}' > trf_rep_seq_count.txt 
-seqtk comp assemblytics_representative_seq.fa | awk '{print $1, $2, $9, $9/$2}' > rep_seq_count.txt
 
-# Extract repeatMasking results 
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extracting repeatMasker results"
-Rscript ./scripts/extract_repeatmasking_for_rep_seq.R -d "$WORKDIR" -t "$CORES"
-    
+# Calculate %GC content 
+seqtk comp assemblytics_representative_seq.fa | awk '{print $1, ($4+$5)/$2}' > gc_count.txt
+
 # This script annotates all the raw insertions and filter for a set of high confident SVs
 cd "$WORKDIR"
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Annotating insertionns and choosing a high confident set"
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Annotating insertionns"
 Rscript ./scripts/make_annotation.R -d "$WORKDIR" -t "$CORES" -r "$REFFLAT" -g "$GWAS"
 
+# Choose what insertions should be inserted
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Choosing a high confident set of insertions"
+Rscript ./scripts/choose_high_conf_ins.R -d "$WORKDIR"
+    
 } # end of pipeline
 
 pipeline 2>&1 | tee $LOGFILE
+

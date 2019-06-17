@@ -13,7 +13,7 @@
 ##
 ## ---------------------------------------------------------------------------------
 ##
-## Notes: This script first annotates insertions then filters a set of high confident insertions
+## Notes: This script annotates insertions 
 ##
 ## ---------------------------------------------------------------------------------
 ##
@@ -60,7 +60,7 @@ source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 #dir="../../new_ref2/"
 #gwas="../../../../KwokRaid02/karen/database/gwasCatalog.txt"
 
-# ------------------------------------------------------------ Part 1: Annotation --------------------------------------------------------------
+# ------------------------------------------------------------ Annotation --------------------------------------------------------------
 # read input sequences and databases
 rep_seq = fread(paste0(dir, "/discovery/assemblytics_representative_seq.txt"), stringsAsFactors = F)
 
@@ -154,19 +154,6 @@ rep_seq = rep_seq[,2:ncol(rep_seq)]
 
 # Write the annotated output
 write.table(rep_seq, paste0(dir, "/discovery/assemblytics_representative_seq_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
-
-# ------------------------------------------------ Part 2: Choose confident insertions -----------------------------------------------------
-
-conf = rep_seq[rep_seq$ngap_boundaries!="yes" & rep_seq$edge_start<1 & rep_seq$edge_end<1 & rep_seq$ngap<=10,]
-TR_discard = which(conf$TRF_N_perct>0.9 & conf$sample_perct<0.9)
-small_variant_discard = which(conf$insert_size<50 & conf$sample_perct<0.5)
-disc = c(unique(TR_discard, small_variant_discard))
-
-if (length(disc)>=1){
-  conf = conf[-disc,]
-}
-
-write.table(conf, paste0(dir, "/discovery/assemblytics_representative_seq_conf_annotated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 
 
 

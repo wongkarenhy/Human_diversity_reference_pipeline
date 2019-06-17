@@ -57,7 +57,13 @@ res$cluster = sapply(cluster_count,length)
 edge = fread(paste0(dir, "/discovery/assemblytics_component_edge.txt"), stringsAsFactors = F)
 
 # read the input to multi-alginments
-assemblytics = fread(paste0(dir, "/discovery/assemblytics_combined_results_with_component_group.txt"), stringsAsFactors = F, header = T)
+assemblytics_path = list.files(path=paste0(dir,"/discovery"), pattern = "^assemblytics_combined_results_with_component_group_*")
+assemblytics = NULL
+for (i in assemblytics_path){
+    
+    assemblytics_per_chr = fread(paste0(dir, "/discovery/", i), stringsAsFactors = F, select = "component")
+    assemblytics = rbind.data.frame(assemblytics, assemblytics_per_chr)
+}
 
 # read sample metadata
 metadata = read.table(paste0(dir, '/TMP_sample_metadata.txt'), stringsAsFactors = F)

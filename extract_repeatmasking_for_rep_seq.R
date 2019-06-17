@@ -90,10 +90,6 @@ repeat_class = mclapply(1:nrow(rep_seq), processRepeatMasker, mc.cores = threads
 
 job_err = repeat_class[1:nrow(rep_seq)]
 stopifnot(length(which(grepl("Error", job_err)))==0)
-# if (length(which(grepl("Error", job_err)))>0){
-#   print("should quit")
-#   quit(status=1)
-# }
 
 comp_repeat = cbind.data.frame(rep_seq$component, unlist(repeat_class), stringsAsFactors = F)
 colnames(comp_repeat) = c("component", "repeat_class")

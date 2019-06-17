@@ -249,6 +249,23 @@ checkAssmCoordsWithinLen = function(assemblytics, faidx, sample, haplo){
   return(assemblytics)
 }
 
+assignComponent=function(i)  {
+  
+  # break dataframe by chr
+  assemblytics_combined_per_chr = assemblytics_combined[assemblytics_combined$ref_chr==i,]
+  
+  # find overlapping reference ranges
+  assemblytics.gr = makeGRangesFromDataFrame(assemblytics_combined_per_chr, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end")
+  assemblytics_assemblytics_ov_self = findOverlaps(assemblytics.gr, assemblytics.gr, type = "any", ignore.strand=T)
+  
+  edges = as.data.frame(assemblytics_assemblytics_ov_self)
+  net = graph_from_data_frame(d=edges, directed = F)
+  membership = components(net)$membership
+  components_count = count_components(net)
+  assemblytics_combined_per_chr$component = membership # add the component number to each INS
+  
+  return(assemblytics_combined_per_chr)
+}
 
 
 BN_validate = function(df){
