@@ -32,3 +32,6 @@ GWAS="/media/KwokRaid02/karen/database/gwasCatalog.txt"
 
 # give the reference a name
 NEW_REF_NAME="NEW_06112019"
+
+# don't change this
+CHR="$(seq 1 22) "X" "Y""

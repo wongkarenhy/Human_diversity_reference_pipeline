@@ -14,6 +14,7 @@ optparse <br>
 igraph <br>
 data.table <br>
 parallel <br>
+plyr <br>
 
 ## Annotation databases:
 REFFLAT file: http://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/refFlat.txt.gz (Version 03312019)<br>
