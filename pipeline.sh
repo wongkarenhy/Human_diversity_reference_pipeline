@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 usage() {
@@ -116,7 +117,7 @@ for i in ${CHR}; do
         -r "${HG38_REF}" \
         -t "${WORKDIR}/tmp/" \
         -m "${WORKDIR}/TMP_sample_metadata.txt" \
-        -n "${CORES}"
+        -n "${CORES}" \
         -a 0
     
 done
