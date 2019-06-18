@@ -11,6 +11,10 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
     
         path_sample_name=$(sed 's:.*/::' <<< "$ASSM_DIR" | cut -d_ -f1)
 
+        if [ -z "$path_sample_name" ]; then
+            path_sample_name="$SAMPLE"
+        fi
+
         for haplo in 2.1 2.2; do
 
             if [ ! -f "$ASSM_DIR"/"$path_sample_name"_pseudohap"$haplo".fasta.fai ]; then
