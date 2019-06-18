@@ -14,6 +14,10 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
         # Need to take care of the GM/NA difference
         path_sample_name=$(sed 's:.*/::' <<< "$ASSM_DIR" | cut -d_ -f1)
 
+        if [ -z "$path_sample_name" ]; then
+            path_sample_name="$SAMPLE"
+        fi
+
         for i in 2.1 2.2; do
              
             if  [ ! -s "${ngapdir}/${SAMPLE}_pseudohap${i}.ngaps.bed" ]; then
