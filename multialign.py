@@ -13,22 +13,26 @@ manager = mul.Manager()
 lock1 = mul.Lock()
 
 
+
 def find_breaks(anchor_sizes,seq):
+
 
 	coordi_count=0
 	for i0,base in enumerate(seq):
 		if base!='-':
-			coordi_count+=1
 			if coordi_count==anchor_sizes[0]:
 				break
+			coordi_count+=1
 
 	front_break=i0
+	coordi_count=0
 	for i1,base in enumerate(seq[i0:]):
 		if base!='-':
-			coordi_count+=1
 			if coordi_count==anchor_sizes[1]:
 				break
+			coordi_count+=1
 	insert_break=i1+front_break
+	
 	return (front_break,insert_break)
 
 
@@ -137,7 +141,7 @@ class multi_align:
 			anchor_sizes=map(find_breaks, map(lambda x:map(int,x.split('_')[-2:]), [self.highest]+self.titles),[self.highest_seq]+self.alignments)
 			anchor_sizes[1:]=[(x[0]-anchor_sizes[0][0],x[1]-anchor_sizes[0][0]) for x in anchor_sizes[1:]]
 
-			matches=map(gap_score,zip(*[[0 if (i>=anchor_sizes[i+1][0] and i<anchor_sizes[i+1][1]) or (bases[0]=='N' or x=='N') else '-' if (bases[0]=='-' and x!='-') or (x=='-' and bases[0]!='-')  else 1 if x==bases[0] else -4 for i,x in enumerate(bases[1:])] for coordi,bases in enumerate(zip(*[self.highest_seq]+self.alignments)[anchor_sizes[0][0]:anchor_sizes[0][1]])]))  
+			matches=map(gap_score,zip(*[[0 if (i<anchor_sizes[i+1][0] or i>=anchor_sizes[i+1][1]) or (bases[0]=='N' or x=='N') else '-' if (bases[0]=='-' and x!='-') or (x=='-' and bases[0]!='-')  else 1 if x==bases[0] else -4 for i,x in enumerate(bases[1:])] for coordi,bases in enumerate(zip(*[self.highest_seq]+self.alignments)[anchor_sizes[0][0]:anchor_sizes[0][1]])]))  
 
 	
 			#matches=[score-sum(4 for _ in re.finditer(r'\-+',''.join(seq))) for score, seq in zip(matches, self.alignments)]
@@ -207,7 +211,7 @@ def generate_files(insertions,tempfolder,refpath):
 	for name, assem_path,scaffold,start,end,ref_chr,ref_start,ref_end,std in zip(insert_name,assem_pathes,scaffolds,starts,ends,ref_chrs,ref_starts,ref_ends,strands):
 
 
-		cmd='printf \">%s_%d_%d\n\" >> %s'%(name,abs(ref_start-cutstart),abs(ref_end-ref_start),componentfile)
+		cmd='printf \">%s_%d_%d\n\" >> %s'%(name,abs(ref_start-cutstart),abs(end-start),componentfile)
 	
 		cmd0="seq=$(samtools faidx %s %s:%d-%d | sed 1d | tr [a-z] [A-Z]); printf  \"$seq\"  >>%s"%(refpath, ref_chr,cutstart,ref_start-1, componentfile)
 
@@ -218,9 +222,17 @@ def generate_files(insertions,tempfolder,refpath):
 		else:
 			cmd1='seq=$(samtools faidx -i %s %s:%d-%d | sed 1d | tr [a-z] [A-Z]); printf  \"$seq\" >> %s'%(assem_path,scaffold,min(start,end), max(start,end)-1,componentfile)
 
-		cmd2="seq=$(samtools faidx %s %s:%d-%d | sed 1d | tr [a-z] [A-Z]); printf  \"$seq\n\"  >> %s"%(refpath, ref_chr,ref_end,cutend, componentfile)
+		cmd2="seq=$(samtools faidx %s %s:%d-%d | sed 1d | tr [a-z] [A-Z]); printf  \"$seq\n\"  >> %s"%(refpath, ref_chr,ref_end,cutend-1, componentfile)
+
+		if anchor_size>0:
 	
-		cmds.extend([cmd,cmd0,cmd1,cmd2])
+			cmds.extend([cmd,cmd0,cmd1,cmd2])
+	
+		else:
+			
+			cmds.extend([cmd,cmd1])
+
+
 
 	#cmds=['samtools faidx %s %s:%d-%d >> %s'%(assem_path,scaffold,min(start,end), max(start,end),componentfile) for assem_path,scaffold,start,end in zip(assem_pathes,scaffolds,starts,ends)]
 
