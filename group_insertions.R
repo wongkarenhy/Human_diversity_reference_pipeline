@@ -82,9 +82,12 @@ for (i in 1:length(assemblytics_combined_added)){
     assemblytics_combined_added_df_per_chr$ref_start = assemblytics_combined_added_df_per_chr$ref_start+0.5
     assemblytics_combined_added_df_per_chr$ref_end = assemblytics_combined_added_df_per_chr$ref_end-0.5
     
+    # get component number if any insert_size is greater than 50
+    large_comp = unique(assemblytics_combined_added_df_per_chr$component[assemblytics_combined_added_df_per_chr$insert_size>=50])
+    
     # partition dataframe by size and chr
-    assemblytics_combined_added_df_per_chr_small = assemblytics_combined_added_df_per_chr[assemblytics_combined_added_df_per_chr$insert_size<50,]
-    assemblytics_combined_added_df_per_chr_big = assemblytics_combined_added_df_per_chr[assemblytics_combined_added_df_per_chr$insert_size>=50,]
+    assemblytics_combined_added_df_per_chr_small = assemblytics_combined_added_df_per_chr[!(assemblytics_combined_added_df_per_chr$component %in% large_comp), ]
+    assemblytics_combined_added_df_per_chr_big = assemblytics_combined_added_df_per_chr[assemblytics_combined_added_df_per_chr$component %in% large_comp, ]
     
     # define chr
     chr = assemblytics_combined_added_df_per_chr_small$ref_chr[1]

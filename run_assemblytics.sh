@@ -22,7 +22,7 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
          
         sed -e 's/$/\t\./' "$SAMPLE".variants_within_alignments.bed | \
             cat - "$SAMPLE".variants_between_alignments_new.bed | \
-            grep -E 'Insertion|Repeat_expanion|Tandem_expanion' | \
+            grep -E 'Insertion|Repeat_expansion|Tandem_expansion' | \
             awk '$5>=10' > "$SAMPLE".filtered_variants.bed;
          
         echo [`date +"%Y-%m-%d %H:%M:%S"`] "run_assemblytics.sh: ${SAMPLE}_unphased DONE") &
@@ -42,7 +42,7 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
             
             sed -e 's/$/\t\./' "$SAMPLE"_"$haplo".variants_within_alignments.bed | \
                 cat - "$SAMPLE"_"$haplo".variants_between_alignments_new.bed | \
-                grep -E 'Insertion|Repeat_expanion|Tandem_expanion' | \
+                grep -E 'Insertion|Repeat_expansion|Tandem_expansion' | \
                 awk '$5>=10' > "$SAMPLE"_"$haplo".filtered_variants.bed;
 
             echo [`date +"%Y-%m-%d %H:%M:%S"`] "run_assemblytics.sh: ${SAMPLE}_${haplo} DONE") &

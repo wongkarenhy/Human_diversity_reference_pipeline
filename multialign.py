@@ -76,10 +76,10 @@ class global_count:
 		self.count=cl.defaultdict(int)
 		
 		for x in l:
-			self.count[x]+=1
+			self.count[x.upper()]+=1
 	
 		for x in ['a','t','c','g']:
-			self.count[x]=self.count[x]*0.1
+			self.count[x]=self.count[x.upper()]*0.1
 	
 		Ncount=2*self.count['N']
 		
@@ -122,13 +122,13 @@ class multi_align:
 			self.highest=self.titles[score_index[0]]
 			self.highest_seq=self.alignments[score_index[0]]
 			
-			self.grouped[self.highest]=[self.highest]
+			self.grouped[len(self.grouped)]=[self.highest]
 
 			self.titles,self.alignments=map(list,zip(*[zip(self.titles,self.alignments)[i] for i in score_index[1:]]))
 		
 		elif len(self.titles)==1:
 			
-			self.grouped[self.titles[0]]=[self.titles[0]]
+			self.grouped[len(self.grouped)]=[self.titles[0]]
 			self.titles,self.alignments=[],[]
 			
 			
@@ -141,7 +141,8 @@ class multi_align:
 			anchor_sizes=map(find_breaks, map(lambda x:map(int,x.split('_')[-2:]), [self.highest]+self.titles),[self.highest_seq]+self.alignments)
 			anchor_sizes[1:]=[(x[0]-anchor_sizes[0][0],x[1]-anchor_sizes[0][0]) for x in anchor_sizes[1:]]
 
-			matches=map(gap_score,zip(*[[0 if (i<anchor_sizes[i+1][0] or i>=anchor_sizes[i+1][1]) or (bases[0]=='N' or x=='N') else '-' if (bases[0]=='-' and x!='-') or (x=='-' and bases[0]!='-')  else 1 if x==bases[0] else -4 for i,x in enumerate(bases[1:])] for coordi,bases in enumerate(zip(*[self.highest_seq]+self.alignments)[anchor_sizes[0][0]:anchor_sizes[0][1]])]))  
+			#matches=map(gap_score,zip(*[[0 if (coordi<anchor_sizes[i+1][0] or coordi>=anchor_sizes[i+1][1]) or (bases[0]=='N' or x=='N') else '-' if (bases[0]=='-' and x!='-') or (x=='-' and bases[0]!='-')  else 1 if x==bases[0] else -4 for i,x in enumerate(bases[1:])] for coordi,bases in enumerate(zip(*[self.highest_seq]+self.alignments)[anchor_sizes[0][0]:anchor_sizes[0][1]])]))  
+			matches=map(gap_score,zip(*[[0 if (coordi<anchor_sizes[i+1][0] or coordi>=anchor_sizes[i+1][1]) or (bases[0].upper()=='N' or x.upper()=='N') else '-' if (bases[0]=='-' and x!='-') or (x=='-' and bases[0]!='-')  else 1 if x.upper()==bases[0].upper() else -4 for i,x in enumerate(bases[1:])] for coordi,bases in enumerate(zip(*[self.highest_seq]+self.alignments)[anchor_sizes[0][0]:anchor_sizes[0][1]])]))  
 
 	
 			#matches=[score-sum(4 for _ in re.finditer(r'\-+',''.join(seq))) for score, seq in zip(matches, self.alignments)]
@@ -155,7 +156,7 @@ class multi_align:
 					new_alignments.append(alignment)
 				else:
 					
-					self.grouped[self.highest].append(title)
+					self.grouped[len(self.grouped)-1].append(title)
 			
 			self.titles,self.alignments=new_title,new_alignments
 	
@@ -210,6 +211,11 @@ def generate_files(insertions,tempfolder,refpath):
 	
 	for name, assem_path,scaffold,start,end,ref_chr,ref_start,ref_end,std in zip(insert_name,assem_pathes,scaffolds,starts,ends,ref_chrs,ref_starts,ref_ends,strands):
 
+		if anchor_size>0:
+			nextline=''
+		else:
+			nextline='\n'
+		
 
 		cmd='printf \">%s_%d_%d\n\" >> %s'%(name,abs(ref_start-cutstart),abs(end-start),componentfile)
 	
@@ -217,10 +223,10 @@ def generate_files(insertions,tempfolder,refpath):
 
 		if std=='+':
 					
-			cmd1='seq=$(samtools faidx %s %s:%d-%d | sed 1d | tr [a-z] [A-Z]); printf  \"$seq\" >> %s'%(assem_path,scaffold,min(start,end), max(start,end)-1,componentfile)
+			cmd1='seq=$(samtools faidx %s %s:%d-%d | sed 1d | tr [a-z] [A-Z]); printf  \"$seq%s\" >> %s'%(assem_path,scaffold,min(start,end), max(start,end)-1,nextline,componentfile)
 		
 		else:
-			cmd1='seq=$(samtools faidx -i %s %s:%d-%d | sed 1d | tr [a-z] [A-Z]); printf  \"$seq\" >> %s'%(assem_path,scaffold,min(start,end), max(start,end)-1,componentfile)
+			cmd1='seq=$(samtools faidx -i %s %s:%d-%d | sed 1d | tr [a-z] [A-Z]); printf  \"$seq%s\" >> %s'%(assem_path,scaffold,min(start,end), max(start,end)-1,nextline,componentfile)
 
 		cmd2="seq=$(samtools faidx %s %s:%d-%d | sed 1d | tr [a-z] [A-Z]); printf  \"$seq\n\"  >> %s"%(refpath, ref_chr,ref_end,cutend-1, componentfile)
 
@@ -229,7 +235,7 @@ def generate_files(insertions,tempfolder,refpath):
 			cmds.extend([cmd,cmd0,cmd1,cmd2])
 	
 		else:
-			
+			#print cmd1+'\n'
 			cmds.extend([cmd,cmd1])
 
 
@@ -342,7 +348,7 @@ def compare(insertions):
 
 		unique_sizes=[len(seq[1])-seq[1].count('N')-seq[1].count('-') for seq in title_seq]
 
-		titles_seqs_unique_sizes=map(list,zip(*sorted([title_seq0+[unique_size] for title_seq0, unique_size in zip(title_seq, unique_sizes) if unique_size>50],key=lambda x:x[-1], reverse=True)))
+		titles_seqs_unique_sizes=map(list,zip(*sorted([title_seq0+[unique_size] for title_seq0, unique_size in zip(title_seq, unique_sizes) if unique_size>0],key=lambda x:x[-1], reverse=True)))
 
 
 		if len(titles_seqs_unique_sizes)>0:
@@ -352,6 +358,10 @@ def compare(insertions):
 			titles,seqs,unique_sizes=[],[],[]
 
 		title_filtered=[x for x in zip(*title_seq)[0] if x not in  titles]
+
+
+		print 'filtered sequence: ',title_filtered
+
 
 		del titles_seqs_unique_sizes, title_seq, reads_ori, reads, unique_sizes
 
@@ -365,6 +375,9 @@ def compare(insertions):
 
 	print 'outputing results %s'%componentfile
 
+
+#	if title_filtered==[]:
+		#title_filtered=['NA']
 
 	report=','.join([';'.join(['_'.join(x.split("_")[:-2]) for x in titles]) for titles in multi])+'\t'+';'.join(title_filtered)
 
@@ -401,8 +414,9 @@ def run(args):
 
 	print 'reading database'
 	
-	allinsertions=pd.read_csv(inputfile,sep='\t',low_memory=False, dtype='str')[['INS_id','component','sample' ,'haplo' ,'assm_coords','adjusted_assm_start','adjusted_assm_end','ref_chr','ref_start','ref_end','strand']].values.tolist()
-	
+	allinsertions=pd.read_csv(inputfile,sep='\t',low_memory=False,dtype=str)[['INS_id','component','sample' ,'haplo' ,'assm_coords','adjusted_assm_start','adjusted_assm_end','ref_chr','ref_start','ref_end','strand']].values.tolist()
+
+
 	allcomponent=cl.defaultdict(list)
 
 	print 'preparing'
@@ -419,7 +433,6 @@ def run(args):
 
 	print 'total components:', len(allcomponent)
 	
-
 	if 1==0:
 		for component in allcomponent:
 			compare(component)

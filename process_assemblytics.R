@@ -91,7 +91,7 @@ assemblytics_list = assemblytics_list[(assemblytics_list_sample %in% metadata$SA
 
 # get a list of samples with BN data
 BN_list = list.files(BN_path)
-BN_list = str_split_fixed(BN_list, "\\.", 2)[,1]
+BN_list = str_split_fixed(BN_list, "\\.|_", 2)[,1]
 
 # read the fasta idx file
 faidx = fread(paste0(dir,"/discovery/tmp_idx.txt"), stringsAsFactors = F)
@@ -131,7 +131,7 @@ processAlignment = function(i) {
   
   
   # remove INS if ref_gap_size is <-7kb or >1kb
-  assemblytics = assemblytics[(assemblytics$ref_gap_size>=(-7000) & assemblytics$ref_gap_size<=1000),]
+  # assemblytics = assemblytics[(assemblytics$ref_gap_size>=(-7000) & assemblytics$ref_gap_size<=1000),]
 
   # calculate ref_gap_size to query_gap_size ratio
   assemblytics$gap_ratio = assemblytics$ref_gap_size/assemblytics$q_gap_size
@@ -200,7 +200,7 @@ processAlignment = function(i) {
   
   
   # Remove if ngap size is large and has no unique sequence
-  assemblytics = assemblytics[(assemblytics$ngap == 0) | (assemblytics$ngap > 0 & (assemblytics$q_gap_size - assemblytics$ngap >= 50) & assemblytics$ngap < 10000),]
+  assemblytics = assemblytics[(assemblytics$ngap == 0) | (assemblytics$ngap > 0 & (assemblytics$q_gap_size - assemblytics$ngap >= 50) & assemblytics$ngap < 10000) | (assemblytics$ngap_perct<0.5),]
 
   
   ## ---------------------------------------------------------------------------------

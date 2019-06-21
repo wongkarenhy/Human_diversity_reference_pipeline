@@ -50,18 +50,18 @@ colnames(res) = c("component", "group")
 res = res[order(res$component),]
 
 # extract cluster count
-cluster_count = (strsplit(res$group, ";"))
+cluster_count = (strsplit(res$group, ","))
 res$cluster = sapply(cluster_count,length)
 
 # read edge result 
-edge = fread(paste0(dir, "/discovery/assemblytics_component_edge.txt"), stringsAsFactors = F)
+#edge = fread(paste0(dir, "/discovery/assemblytics_component_edge.txt"), stringsAsFactors = F)
 
 # read the input to multi-alginments
 assemblytics_path = list.files(path=paste0(dir,"/discovery"), pattern = "^assemblytics_combined_results_with_component_group_*")
 assemblytics = NULL
 for (i in assemblytics_path){
     
-    assemblytics_per_chr = fread(paste0(dir, "/discovery/", i), stringsAsFactors = F, select = "component")
+    assemblytics_per_chr = fread(paste0(dir, "/discovery/", i), stringsAsFactors = F, select = c("ref_chr", "ref_start", "ref_end", "INS_id", "component"))
     assemblytics = rbind.data.frame(assemblytics, assemblytics_per_chr)
 }
 
@@ -77,9 +77,9 @@ assm_tbl = c(table(assemblytics$component))
 
 start_counter = 1
 representative_df = NULL
-for (i in 1:length(assm_tbl)){
-#for (i in 1:7006){
-  end = start_counter + assm_tbl[i] - 1
+#for (i in 1:length(assm_tbl)){
+for (i in 1:12){
+  end = start_counter + as.numeric(assm_tbl[i]) - 1
 
   representative_df = findRepresentativeSeq(start_counter, end)
   

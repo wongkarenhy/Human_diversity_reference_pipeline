@@ -145,6 +145,8 @@ overlapNgap = function(assemblytics, ngapFile) {
     
   }
   
+  assemblytics$ngap_perct = assemblytics$ngap/assemblytics$adjusted_insert_size
+  
   return(assemblytics)
 }
 
@@ -197,9 +199,14 @@ processAdjustedCoords = function(assemblytics){
     
     # **2. Make sure only two sets of coordinates are reported
     # in neg_ref_gap, we need to make sure assm_start and assm_end are found in the adjusted_coordinates column
-    neg_ref_gap_list = strsplit(neg_ref_gap$adjusted_coords, ";")
+    neg_ref_gap_list = sapply(strsplit(neg_ref_gap$adjusted_coords, ";"), unique)
     discard = NULL
     for (s in 1:length(neg_ref_gap_list)){
+      
+      if (length(neg_ref_gap_list[[s]]!=2)){
+          discard = c(discard, s)
+          next
+      }
       
       startPattern = neg_ref_gap$assm_start[s]
       endPattern = neg_ref_gap$assm_end[s]
@@ -233,6 +240,9 @@ processAdjustedCoords = function(assemblytics){
     
     # **4. Put the two lists together
     assemblytics = rbind.data.frame(pos_ref_gap, neg_ref_gap, stringsAsFactors = F)
+    
+    # **5. Add a column called adjusted insert size
+    assemblytics$adjusted_insert_size = as.numeric(assemblytics$adjusted_assm_end) - as.numeric(assemblytics$adjusted_assm_start)
     
     return(assemblytics)
 }
@@ -336,44 +346,57 @@ cal_edge_size<-function(l, standard_inc=0.5){
 
 findRepresentativeSeq = function(start_counter, end){
   
-  #print(c(i,start_counter,end))
+  print(c(i,start_counter,end))
   
-  # subset assemblytics dataframe
-  assm_sub_df = assemblytics[start_counter:end,]
-  
-  target_id = str_split_fixed(res$group[i], ";|,", 2)[,1]
-  
-  # retrieve line
-  rep_seq = assm_sub_df[assm_sub_df$INS_id==target_id,]
-  
-  # add ethnicity info to rep_seq
-  keep = which(metadata$sample %in% unique(assm_sub_df$sample))
-  sample_ethnicity = (metadata[keep,"population"])
-  
-  total_sample_count = nrow(metadata)
-  sample_count = length(keep)
-  sample_perct = sample_count/total_sample_count
-  sample_record = unlist(assm_sub_df$INS_id)
-  sample_record = paste(unique(sample_record), collapse = ';')
-  ethnicity_tbl = c(table(sample_ethnicity)[c("AFR", "AMR", "EAS", "EUR", "SAS")])
-  ethnicity_tbl = ifelse(is.na(ethnicity_tbl), 0, ethnicity_tbl)
-  
-  metadata_ethnicity_tbl = c(table(metadata$population)[c("AFR", "AMR", "EAS", "EUR", "SAS")])
-  metadata_ethnicity_tbl = ifelse(is.na(metadata_ethnicity_tbl), 0, metadata_ethnicity_tbl)
-  
-  ethnicity_prct = ethnicity_tbl/metadata_ethnicity_tbl
-  
-  sample_nonAFR = sum(ethnicity_tbl[c(2:5)])
-  percent_nonAFR = sample_nonAFR/nrow(metadata[metadata$population!="AFR",])
-  
-  # extract edge scores
-  edge_start = edge$edge_start[i]
-  edge_end = edge$edge_end[i]
-  
-  newline = unlist(c(rep_seq, sample_count, sample_perct, sample_record, ethnicity_tbl, sample_nonAFR, ethnicity_prct, percent_nonAFR, edge_start, edge_end))
-  representative_df[[i]] = newline
-  
-  return(representative_df)
+  # # subset assemblytics dataframe
+  # assm_sub_df = assemblytics[start_counter:end,]
+  # 
+  # target_id = str_split_fixed(res$group[i], ";|,", 2)[,1]
+  # 
+  # # retrieve line
+  # rep_seq = assm_sub_df[assm_sub_df$INS_id==target_id,]
+  # 
+  # if (res$cluster[i]>1){
+  #     
+  #     cluster_list = NULL
+  #     for (l in 1:res$cluster[i]){
+  #         
+  #       cluster_id = s
+  #           
+  #       
+  #     }
+  #   
+  # }
+  # 
+  # # add ethnicity info to rep_seq
+  # keep = which(metadata$sample %in% unique(assm_sub_df$sample))
+  # sample_ethnicity = (metadata[keep,"population"])
+  # 
+  # total_sample_count = nrow(metadata)
+  # sample_count = length(keep)
+  # sample_perct = sample_count/total_sample_count
+  # sample_record = unlist(assm_sub_df$INS_id)
+  # sample_record = paste(unique(sample_record), collapse = ';')
+  # ethnicity_tbl = c(table(sample_ethnicity)[c("AFR", "AMR", "EAS", "EUR", "SAS")])
+  # ethnicity_tbl = ifelse(is.na(ethnicity_tbl), 0, ethnicity_tbl)
+  # 
+  # metadata_ethnicity_tbl = c(table(metadata$population)[c("AFR", "AMR", "EAS", "EUR", "SAS")])
+  # metadata_ethnicity_tbl = ifelse(is.na(metadata_ethnicity_tbl), 0, metadata_ethnicity_tbl)
+  # 
+  # ethnicity_prct = ethnicity_tbl/metadata_ethnicity_tbl
+  # 
+  # sample_nonAFR = sum(ethnicity_tbl[c(2:5)])
+  # percent_nonAFR = sample_nonAFR/nrow(metadata[metadata$population!="AFR",])
+  # 
+  # # extract edge scores
+  # #edge_start = edge$edge_start[i]
+  # #edge_end = edge$edge_end[i]
+  # 
+  # newline = unlist(c(rep_seq, sample_count, sample_perct, sample_record, ethnicity_tbl, sample_nonAFR, ethnicity_prct, percent_nonAFR))
+  # #newline = unlist(c(rep_seq, sample_count, sample_perct, sample_record, ethnicity_tbl, sample_nonAFR, ethnicity_prct, percent_nonAFR, edge_start, edge_end))
+  # representative_df[[i]] = newline
+  # 
+  # return(representative_df)
   
 }
 
@@ -400,6 +423,9 @@ checkResAssemblyticsComponentConcord = function(assemblytics, res){
     assemblytics = assemblytics[-discard,]
     
   }
+  
+  # sort assemblytics by component
+  assemblytics = assemblytics[order(assemblytics$component),]
   
   # if (any(unique(assemblytics$component) != unique(res$component))){
   #     stop("Component not identical between assemblytics and multiple alignment results")
