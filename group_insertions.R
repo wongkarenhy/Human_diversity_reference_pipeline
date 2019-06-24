@@ -82,6 +82,23 @@ for (i in 1:length(assemblytics_combined_added)){
     assemblytics_combined_added_df_per_chr$ref_start = assemblytics_combined_added_df_per_chr$ref_start+0.5
     assemblytics_combined_added_df_per_chr$ref_end = assemblytics_combined_added_df_per_chr$ref_end-0.5
     
+    # write singleton to a separate file (components with just one sample)
+    singleton = names(which(table(assemblytics_combined_added_df_per_chr[,c("component")])==1))
+    doubleton = names(which(table(assemblytics_combined_added_df_per_chr[,c("component")])==2))
+    doubleton_df = assemblytics_combined_added_df_per_chr[assemblytics_combined_added_df_per_chr$component %in% doubleton,]
+    doubleton_df = doubleton_df[order(doubleton_df$component),]
+    doubleton_df_odd = doubleton_df[seq(1,nrow(doubleton_df),2),]
+    doubleton_df_even = doubleton_df[seq(2,nrow(doubleton_df),2),]
+    doubleton_df_odd$even = doubleton_df_even$sample
+    # here doubleton is defined as two INS but from the same sample
+    doubleton = doubleton_df_odd$component[doubleton_df_odd$sample==doubleton_df_odd$even]
+    singleton_per_chr_df = assemblytics_combined_added_df_per_chr[(assemblytics_combined_added_df_per_chr$component %in% c(singleton, doubleton)), ]
+    # When output singleton, make sure every component is output exactly once (not twice as seen in both haplotypes)
+    singleton_per_chr_df = singleton_per_chr_df[-which(duplicated(singleton_per_chr_df$component)),]
+    
+    # Remove singleton entries from the original dataframe
+    assemblytics_combined_added_df_per_chr = assemblytics_combined_added_df_per_chr[!(assemblytics_combined_added_df_per_chr$component %in% c(singleton, doubleton)), ]
+    
     # get component number if any insert_size is greater than 50
     large_comp = unique(assemblytics_combined_added_df_per_chr$component[assemblytics_combined_added_df_per_chr$insert_size>=50])
     
@@ -96,6 +113,7 @@ for (i in 1:length(assemblytics_combined_added)){
     options(scipen=999)
     write.table(assemblytics_combined_added_df_per_chr_small, paste0(dir, "/discovery/assemblytics_combined_results_with_component_group_small_", chr,".txt"), col.names = T, row.names = F, quote = F, sep = '\t')
     write.table(assemblytics_combined_added_df_per_chr_big, paste0(dir, "/discovery/assemblytics_combined_results_with_component_group_big_", chr,".txt"), col.names = T, row.names = F, quote = F, sep = '\t')
+    write.table(singleton_per_chr_df, paste0(dir, "/discovery/singleton_", chr,".txt"), col.names = T, row.names = F, quote = F, sep = '\t')
     
 }
 

@@ -91,8 +91,8 @@ repeat_class = mclapply(1:nrow(rep_seq), processRepeatMasker, mc.cores = threads
 job_err = repeat_class[1:nrow(rep_seq)]
 stopifnot(length(which(grepl("Error", job_err)))==0)
 
-comp_repeat = cbind.data.frame(rep_seq$component, unlist(repeat_class), stringsAsFactors = F)
-colnames(comp_repeat) = c("component", "repeat_class")
+comp_repeat = cbind.data.frame(rep_seq$component, rep_seq$INS_id, rep_seq$cluster_id, unlist(repeat_class), stringsAsFactors = F)
+colnames(comp_repeat) = c("component", "INS_id", "cluster_id", "repeat_class")
 
 write.table(comp_repeat, paste0(dir, "/discovery/comp_repeat.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
 

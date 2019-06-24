@@ -214,7 +214,7 @@ processAlignment = function(i) {
   
   # Sort and reorder dataframe
   assemblytics = assemblytics[order(assemblytics$ref_chr, assemblytics$ref_start), ] 
-  assemblytics = assemblytics[,c("ref_chr","ref_start","ref_end","insert_size","strand","ref_gap_size","q_gap_size","assm_coords","assm_id","assm_start","assm_end","adjusted_coords","adjusted_assm_start","adjusted_assm_end","gap_ratio","BN_size","label_dist","BN_start","BN_end","BN_enzyme","BN_validated","ngap","ngap_boundaries","ngap_boundaries_size_left","ngap_boundaries_size_right","sample","haplo","method")]
+  assemblytics = assemblytics[,c("ref_chr","ref_start","ref_end","insert_size","strand","ref_gap_size","q_gap_size","assm_coords","assm_id","assm_start","assm_end","adjusted_coords","adjusted_assm_start","adjusted_assm_end", "adjusted_insert_size", "gap_ratio","BN_size","label_dist","BN_start","BN_end","BN_enzyme","BN_validated","ngap","ngap_boundaries","ngap_boundaries_size_left","ngap_boundaries_size_right", "ngap_perct", "sample","haplo","method")]
   
   # Add INS_id to the last column 
   assemblytics$INS_id = paste0(sample,"_", haplo, "_", 1:nrow(assemblytics))

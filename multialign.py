@@ -56,13 +56,28 @@ def gap_score(count):
 	last=''
 	score=0
 	for x in count:
-		if x=='-':
-			if last=='-' or last==0:
+		if x==0:
+			y=x
+		
+		elif x in ['-','n','N']:
+
+			if last in ['-','n','N',0]:
 				y=0
+			elif last>=1:
+				y=-2
 			else:
-				y=-4
+				y=-0.2
+
+		elif last in ['-','n','N']:
+			if x>=1:
+				y=x-2
+			else:
+				y=x-0.2
+
 		else:
 			y=x
+
+
 		score+=y
 		last=x
 	return score
@@ -142,7 +157,7 @@ class multi_align:
 			anchor_sizes[1:]=[(x[0]-anchor_sizes[0][0],x[1]-anchor_sizes[0][0]) for x in anchor_sizes[1:]]
 
 			#matches=map(gap_score,zip(*[[0 if (coordi<anchor_sizes[i+1][0] or coordi>=anchor_sizes[i+1][1]) or (bases[0]=='N' or x=='N') else '-' if (bases[0]=='-' and x!='-') or (x=='-' and bases[0]!='-')  else 1 if x==bases[0] else -4 for i,x in enumerate(bases[1:])] for coordi,bases in enumerate(zip(*[self.highest_seq]+self.alignments)[anchor_sizes[0][0]:anchor_sizes[0][1]])]))  
-			matches=map(gap_score,zip(*[[0 if (coordi<anchor_sizes[i+1][0] or coordi>=anchor_sizes[i+1][1]) or (bases[0].upper()=='N' or x.upper()=='N') else '-' if (bases[0]=='-' and x!='-') or (x=='-' and bases[0]!='-')  else 1 if x.upper()==bases[0].upper() else -4 for i,x in enumerate(bases[1:])] for coordi,bases in enumerate(zip(*[self.highest_seq]+self.alignments)[anchor_sizes[0][0]:anchor_sizes[0][1]])]))  
+			matches=map(gap_score,zip(*[[0 if (coordi<anchor_sizes[i+1][0] or coordi>=anchor_sizes[i+1][1]) or (bases[0]=='-' and x=='-') else x if (bases[0].upper()=='N' or x.upper()=='N') else '-' if (bases[0]=='-')  else 1 if x==bases[0].upper() else 0.1 if x==bases[0].lower() else -4 if (x.isupper() or (x=='-' and bases[0].isupper()) ) else -0.4 if (x!='-' and bases[0]!='-') else '-'  for i,x in enumerate(bases[1:])] for coordi,bases in enumerate(zip(*[self.highest_seq]+self.alignments)[anchor_sizes[0][0]:anchor_sizes[0][1]])]))  
 
 	
 			#matches=[score-sum(4 for _ in re.finditer(r'\-+',''.join(seq))) for score, seq in zip(matches, self.alignments)]

@@ -25,6 +25,8 @@ rm(list=ls())
 suppressMessages(library(optparse))
 suppressMessages(library(stringr))
 suppressMessages(library(GenomicRanges))
+suppressMessages(library(plyr))
+
 
 # command line options
 ## ---------------------------------------------------------------------------------
@@ -58,17 +60,17 @@ file_list_sample = str_split_fixed(assemblytics_list, "_",2)[,1]
 assemblytics_list = assemblytics_list[(file_list_sample %in% metadata$SAMPLE) | (file_list_sample %in% metadata$ALT_NAME)]
 
 # read all the processed assemblytics files and append to a new variable
-assemblytics_ALL = NULL
-for (i in assemblytics_list){
+assemblytics = NULL
+for (i in 1:length(assemblytics_list)){
   
-  print(i)
+  file = assemblytics_list[i]
+  
   # Read individual processed assemblytics file
-  assemblytics = read.table(paste0(assemblytics_path,i), stringsAsFactors = F, header = T)
-  
-  # Combine
-  assemblytics_ALL = rbind.data.frame(assemblytics_ALL, assemblytics, stringsAsFactors = F)
+  assemblytics[[i]] = read.table(paste0(assemblytics_path,file), stringsAsFactors = F, header = T)
   
 }
+
+assemblytics_ALL = ldply(assemblytics, data.frame)
 
 # turn off scientific notation
 options(scipen=999)

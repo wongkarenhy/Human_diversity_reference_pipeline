@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 usage() {
@@ -38,10 +37,6 @@ set -e
 pipeline(){
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "#> START: " $0 
 
-if [ -d ./tmp ]; then
-    rm ./tmp
-fi    
-    
 if [ ! -d ./assemblytics ]; then
     mkdir ./assemblytics
 fi
@@ -54,14 +49,14 @@ if [ ! -d ./discovery/raw ]; then
     mkdir ./discovery/raw
 fi
 
+if [ ! -d ./discovery/singleton ]; then
+    mkdir ./discovery/singleton
+fi
+
 if [ ! -d ./discovery/final_fasta ]; then
     mkdir ./discovery/final_fasta
 fi
     
-if [ ! -d ./discovery/final_fasta/repeats ]; then
-    mkdir ./discovery/final_fasta/repeats
-fi
-
 # Modify sample metadata depending on the MODE variable
 if [ "$MODE" = "ALL" ]; then
     cp "${WORKDIR}/sample_metadata.txt" "${WORKDIR}/TMP_sample_metadata.txt"
@@ -92,47 +87,30 @@ bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS"
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Compiling assemblytics output"
 Rscript ./scripts/process_assemblytics.R -t "$CORES" -d "$WORKDIR" -b "$BN_SV7989" -n "$NGAPDIR"
     
+# Group individual assemblytics files
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Combining individual files"
 Rscript ./scripts/combine_individual_assemblytics.R -d "$WORKDIR"
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Grouping insertions based on overlapping reference coordinates"
 Rscript ./scripts/group_insertions.R -d "$WORKDIR" -t "$CORES"
     
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Calculating edge score for each component"
-Rscript ./scripts/calc_edge.R -d "$WORKDIR"
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Repeatmasking singletons"
+bash ./scripts/RM_singleton.sh "$CHR" "$WORKDIR" "$CORES"
     
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Choosing representative insertion sequences"
-
-for i in ${CHR}; do
-    
-    python2.7 ./scripts/multialign.py \
-        -i "${WORKDIR}/discovery/assemblytics_combined_results_with_component_group_big_chr${i}.txt" \
-        -r "${HG38_REF}" \
-        -t "${WORKDIR}/tmp/" \
-        -m "${WORKDIR}/TMP_sample_metadata.txt" \
-        -n "${CORES}"
-
-    python2.7 ./scripts/multialign.py \
-        -i "${WORKDIR}/discovery/assemblytics_combined_results_with_component_group_small_chr${i}.txt" \
-        -r "${HG38_REF}" \
-        -t "${WORKDIR}/tmp/" \
-        -m "${WORKDIR}/TMP_sample_metadata.txt" \
-        -n "${CORES}" \
-        -a 0
-    
-done
-    
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Processing multiple alignment results"
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running multiple alignment for non-singleton insertions"
+bash ./scripts/run_multialign.sh "$CHR" "WORKDIR" "HG38_REF" "$CORES"
+  
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Processing multiple alignment results for non-singletons"
 Rscript ./scripts/process_multi_results.R -d "$WORKDIR"
-
+  
 # Extract repeatMasking results 
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extracting repeatMasker results"
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extracting repeatMasker results for non-singletons"
 Rscript ./scripts/extract_repeatmasking_for_rep_seq.R -d "$WORKDIR" -t "$CORES"
 
 # Extract sequences for TRF
-echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extract the insertion sequences"
-bash ./scripts/retrieve_representative_seq.sh assemblytics_representative_seq "$WORKDIR"
-
+echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Extract the insertion sequences for non-singletons"
+bash ./scripts/retrieve_representative_seq.sh assemblytics_representative_seq "$WORKDIR" "$WORKDIR"
+    
 # Run TRF 
 cd ./discovery/final_fasta
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running tandem repeat finder (TRF)"
@@ -151,11 +129,10 @@ cd "$WORKDIR"
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Annotating insertionns"
 Rscript ./scripts/make_annotation.R -d "$WORKDIR" -t "$CORES" -r "$REFFLAT" -g "$GWAS"
 
-# Choose what insertions should be inserted
+# Choose what insertions should be added to the new reference
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Choosing a high confident set of insertions"
 Rscript ./scripts/choose_high_conf_ins.R -d "$WORKDIR"
     
 } # end of pipeline
 
 pipeline 2>&1 | tee $LOGFILE
-

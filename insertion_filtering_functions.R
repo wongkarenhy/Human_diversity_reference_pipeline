@@ -333,7 +333,7 @@ BN_validate = function(df){
 }
 
 
-cal_edge_size<-function(l, standard_inc=0.5){
+cal_edge_size = function(l, standard_inc=0.5){
   lenl = length(l)
   if (lenl<2) edge = NA
   else {
@@ -344,61 +344,129 @@ cal_edge_size<-function(l, standard_inc=0.5){
   return(edge)
 }
 
-findRepresentativeSeq = function(start_counter, end){
+findRepresentativeSeq = function(assm_sub_df, res){
   
-  print(c(i,start_counter,end))
+  rep_seq = NULL
+  target_id = str_split_fixed(res$group[i], ";|,", 2)[,1]
+
+  # retrieve line
+  rep_seq[[1]] = assm_sub_df[assm_sub_df$INS_id==target_id,]
+  rep_seq[[1]]$type = 0 # type 0 means it'll stay in the main analysis pipeline; 1 means it'll not be included in the main analysis (supplementary dataset)
   
-  # # subset assemblytics dataframe
-  # assm_sub_df = assemblytics[start_counter:end,]
-  # 
-  # target_id = str_split_fixed(res$group[i], ";|,", 2)[,1]
-  # 
-  # # retrieve line
-  # rep_seq = assm_sub_df[assm_sub_df$INS_id==target_id,]
-  # 
-  # if (res$cluster[i]>1){
-  #     
-  #     cluster_list = NULL
-  #     for (l in 1:res$cluster[i]){
-  #         
-  #       cluster_id = s
-  #           
-  #       
-  #     }
-  #   
-  # }
-  # 
-  # # add ethnicity info to rep_seq
-  # keep = which(metadata$sample %in% unique(assm_sub_df$sample))
-  # sample_ethnicity = (metadata[keep,"population"])
-  # 
-  # total_sample_count = nrow(metadata)
-  # sample_count = length(keep)
-  # sample_perct = sample_count/total_sample_count
-  # sample_record = unlist(assm_sub_df$INS_id)
-  # sample_record = paste(unique(sample_record), collapse = ';')
-  # ethnicity_tbl = c(table(sample_ethnicity)[c("AFR", "AMR", "EAS", "EUR", "SAS")])
-  # ethnicity_tbl = ifelse(is.na(ethnicity_tbl), 0, ethnicity_tbl)
-  # 
-  # metadata_ethnicity_tbl = c(table(metadata$population)[c("AFR", "AMR", "EAS", "EUR", "SAS")])
-  # metadata_ethnicity_tbl = ifelse(is.na(metadata_ethnicity_tbl), 0, metadata_ethnicity_tbl)
-  # 
-  # ethnicity_prct = ethnicity_tbl/metadata_ethnicity_tbl
-  # 
-  # sample_nonAFR = sum(ethnicity_tbl[c(2:5)])
-  # percent_nonAFR = sample_nonAFR/nrow(metadata[metadata$population!="AFR",])
-  # 
-  # # extract edge scores
-  # #edge_start = edge$edge_start[i]
-  # #edge_end = edge$edge_end[i]
-  # 
-  # newline = unlist(c(rep_seq, sample_count, sample_perct, sample_record, ethnicity_tbl, sample_nonAFR, ethnicity_prct, percent_nonAFR))
-  # #newline = unlist(c(rep_seq, sample_count, sample_perct, sample_record, ethnicity_tbl, sample_nonAFR, ethnicity_prct, percent_nonAFR, edge_start, edge_end))
-  # representative_df[[i]] = newline
-  # 
-  # return(representative_df)
+  # identify all clusters
+  all_clus = strsplit(res$group[i], ",")
+  
+  # extract the main cluster
+  main_clus_id = unlist(strsplit(all_clus[[1]][1], ";"))
+  main_clus_df = assm_sub_df[assm_sub_df$INS_id %in% main_clus_id,]
+  
+  # calculate edge score for main cluster if unique(sample)>1
+  if (length(unique(main_clus_df$sample))>1){
+    
+      main_edge_df = main_clus_df[main_clus_df$ngap_boundaries_size_left==0 & main_clus_df$ngap_boundaries_size_right==0,]
+      rep_seq[[1]]$edge_start = cal_edge_size(main_edge_df$ref_start)
+      rep_seq[[1]]$edge_end = cal_edge_size(main_edge_df$ref_end)
+      
+  } else{
+    
+      rep_seq[[1]]$edge_start = NA
+      rep_seq[[1]]$edge_end = NA
+      
+  }
+  
+  clus_start = min(main_clus_df$ref_start)
+  clus_end = max(main_clus_df$ref_end)
+  
+  rep_seq[[1]]$cluster_id = paste0(rep_seq[[1]]$component, "_1" )
+  
+  rep_seq[[1]] = c(rep_seq[[1]], as.list(annotateRepSeq(main_clus_df))) 
+  
+  # If there are more than one clusters
+  if (res$cluster[i]>1){
+    
+    for (l in 2:res$cluster[i]){ # for all other clusters...
+
+        cluster_id = unlist(strsplit(all_clus[[1]][l], ";"))
+        clus_df = assm_sub_df[assm_sub_df$INS_id %in% cluster_id,]
+  
+        rep_seq[[l]] = assm_sub_df[assm_sub_df$INS_id == cluster_id[1],]
+        
+        curr_start = min(clus_df$ref_start)
+        curr_end = max(clus_df$ref_end)
+        
+        # check to see if other clusters overlap with existing cluster based on ref coordinates
+        rep_seq[[l]]$type = ifelse(all(clus_end <  curr_start) | all(clus_start > curr_end), 0, 1)
+
+        clus_start = c(clus_start, curr_start)
+        clus_end = c(clus_end, curr_end)
+
+        # for these clusters, calculate edge scores
+        if (length(unique(clus_df$sample))>1){
+          
+          edge_df = clus_df[clus_df$ngap_boundaries_size_left==0 & clus_df$ngap_boundaries_size_right==0,]
+          rep_seq[[l]]$edge_start = cal_edge_size(edge_df$ref_start)
+          rep_seq[[l]]$edge_end = cal_edge_size(edge_df$ref_end)
+          
+        } else{
+          
+          rep_seq[[l]]$edge_start = NA
+          rep_seq[[l]]$edge_end = NA
+          
+        }
+        
+        rep_seq[[l]]$cluster_id = paste0(rep_seq[[l]]$component, "_", l)
+        
+        rep_seq[[l]] = c(rep_seq[[l]], as.list(annotateRepSeq(clus_df))) 
+        
+      }
+
+  }
+
+  rep_seq = ldply(rep_seq, data.frame)
+  return(rep_seq)
   
 }
+
+annotateRepSeq = function(clus_df){
+  
+    # add ethnicity info to rep_seq
+    keep = which(metadata$sample %in% unique(clus_df$sample))
+    sample_ethnicity = (metadata[keep,"population"])
+    
+    total_sample_count = nrow(metadata)
+    sample_count = length(keep)
+    sample_perct = sample_count/total_sample_count
+    sample_record = unlist(clus_df$INS_id)
+    sample_record = paste(unique(sample_record), collapse = ';')
+    ethnicity_tbl = c(table(sample_ethnicity)[c("AFR", "AMR", "EAS", "EUR", "SAS")])
+    ethnicity_tbl = ifelse(is.na(ethnicity_tbl), 0, ethnicity_tbl)
+    
+    metadata_ethnicity_tbl = c(table(metadata$population)[c("AFR", "AMR", "EAS", "EUR", "SAS")])
+    metadata_ethnicity_tbl = ifelse(is.na(metadata_ethnicity_tbl), 0, metadata_ethnicity_tbl)
+    
+    ethnicity_prct = ethnicity_tbl/metadata_ethnicity_tbl
+    
+    sample_nonAFR = sum(ethnicity_tbl[c(2:5)])
+    percent_nonAFR = sample_nonAFR/nrow(metadata[metadata$population!="AFR",])
+    
+    anno = c(sample_count, sample_perct, sample_record, as.vector(ethnicity_tbl), sample_nonAFR, as.vector(ethnicity_prct), percent_nonAFR)
+    names(anno) = c("sample_count", "sample_perct", "sample_record", "sample_AFR", "sample_AMR", "sample_EAS", "sample_EUR", "sample_SAS", "sample_nonAFR", 'percent_AFR', "percent_AMR", 'percent_EAS', "percent_EUR", "percent_SAS", "percent_nonAFR")
+    
+    return(anno)
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 calc_min_dist_to_exon = function(i){
   
