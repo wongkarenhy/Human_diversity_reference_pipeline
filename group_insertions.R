@@ -106,6 +106,13 @@ for (i in 1:length(assemblytics_combined_added)){
         for (p in problematic_vec){
           
             problematic_df = comp_df[comp_df$sample==count_df$sample[p] & comp_df$haplo==count_df$haplo[p],]
+            problematic_df = problematic_df[order(problematic_df$ref_gap_size),]
+            
+            # don't do anything if the ref coords are not overlapping
+            problematic_df.gr = makeGRangesFromDataFrame(problematic_df, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end", ignore.strand = T)
+            ov = findOverlaps(problematic_df.gr, problematic_df.gr, type = "any")
+            
+            if (length(ov[ov@from!=ov@to])==0) next
             
             if (length(unique(problematic_df$insert_size))!=1) { # if the two scaffolds report different insert size, we will discard them both
             
@@ -121,9 +128,7 @@ for (i in 1:length(assemblytics_combined_added)){
             
         }
         
-        
       }
-      
       
     }
     
