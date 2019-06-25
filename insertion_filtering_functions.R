@@ -158,7 +158,7 @@ removeRedundantInsertion = function(assemblytics){
   dup_end = names(which(table(assemblytics$ref_end) > 1))
   
   assemblytics = assemblytics[(!assemblytics$ref_start %in% dup_start) & (!assemblytics$ref_end %in% dup_end),]
-  
+  #df = assemblytics[(assemblytics$ref_start %in% dup_start) | (assemblytics$ref_end %in% dup_end),]
   #keep = which(!duplicated(assemblytics[,c("ref_chr", "ref_start", "ref_end")]))
   #assemblytics = assemblytics[keep,]
   
@@ -253,8 +253,8 @@ checkAssmCoordsWithinLen = function(assemblytics, faidx, sample, haplo){
   keep = which(faidx$sample==sample & faidx$haplo==haplo)
   fai = faidx[keep,]
   
-  assemblytics = merge(assemblytics,fai[,c("assm_id", "contig_length")], by = "assm_id")
-  assemblytics = assemblytics[(as.numeric(assemblytics$adjusted_assm_start)>0 & as.numeric(assemblytics$adjusted_assm_end)<assemblytics$contig_length),]
+  assemblytics = merge(assemblytics,fai[,c("assm_id", "scaffold_length")], by = "assm_id")
+  assemblytics = assemblytics[(as.numeric(assemblytics$adjusted_assm_start)>0 & as.numeric(assemblytics$adjusted_assm_end)<assemblytics$scaffold_length),]
   
   return(assemblytics)
 }

@@ -95,7 +95,7 @@ BN_list = str_split_fixed(BN_list, "\\.|_", 2)[,1]
 
 # read the fasta idx file
 faidx = fread(paste0(dir,"/discovery/tmp_idx.txt"), stringsAsFactors = F)
-colnames(faidx) = c("assm_id", "contig_length", "sample", "haplo")
+colnames(faidx) = c("assm_id", "scaffold_length", "sample", "haplo")
 
 # read segdups and blacklist files 
 segdup = read.table(paste0(dir, "/segdups.bedpe"), stringsAsFactors = F)
@@ -146,7 +146,7 @@ processAlignment = function(i) {
   assemblytics = removeSegdupSVblacklist(assemblytics, assemblytics.gr, segdup.gr, sv_bl.gr)
   
   # remove redundant insertions
-  assemblytics = removeRedundantInsertion(assemblytics)
+  #assemblytics = removeRedundantInsertion(assemblytics)
   
   
   ## ---------------------------------------------------------------------------------
@@ -214,7 +214,7 @@ processAlignment = function(i) {
   
   # Sort and reorder dataframe
   assemblytics = assemblytics[order(assemblytics$ref_chr, assemblytics$ref_start), ] 
-  assemblytics = assemblytics[,c("ref_chr","ref_start","ref_end","insert_size","strand","ref_gap_size","q_gap_size","assm_coords","assm_id","assm_start","assm_end","adjusted_coords","adjusted_assm_start","adjusted_assm_end", "adjusted_insert_size", "gap_ratio","BN_size","label_dist","BN_start","BN_end","BN_enzyme","BN_validated","ngap","ngap_boundaries","ngap_boundaries_size_left","ngap_boundaries_size_right", "ngap_perct", "sample","haplo","method")]
+  assemblytics = assemblytics[,c("ref_chr","ref_start","ref_end","insert_size","strand","ref_gap_size","q_gap_size","assm_coords","assm_id","assm_start","assm_end", "scaffold_length", "adjusted_coords","adjusted_assm_start","adjusted_assm_end", "adjusted_insert_size", "gap_ratio","BN_size","label_dist","BN_start","BN_end","BN_enzyme","BN_validated","ngap","ngap_boundaries","ngap_boundaries_size_left","ngap_boundaries_size_right", "ngap_perct", "sample","haplo","method")]
   
   # Add INS_id to the last column 
   assemblytics$INS_id = paste0(sample,"_", haplo, "_", 1:nrow(assemblytics))
