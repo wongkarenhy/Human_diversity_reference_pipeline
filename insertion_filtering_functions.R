@@ -1,7 +1,7 @@
 readBN = function(sample, BN_path){
   
   # Validate the BN SV if larger than 1kb
-  BN = read.table(paste0(BN_path, sample,".smap"), stringsAsFactors = F)
+  BN = read.table(paste0(BN_path , "/", BN_list[grepl(sample, BN_list)]), stringsAsFactors = F)
   BN = BN[,c(3,7,8,10,18,25,5,6,26)]
   colnames(BN) = c("ref_chr", "ref_start", "ref_end", "type", "zygosity", "size", "map_start", "map_end", "enzyme")
   BN = BN[BN$type=="insertion",] # Only subset insertions

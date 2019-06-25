@@ -114,73 +114,73 @@ processAlignment = function(i) {
   
   # get the sample name of the file we're handling
   sample = str_split_fixed(i, "_|\\.", 2)[,1]
-  
-  # get the haplo 
+
+  # get the haplo
   haplo = substr((str_split_fixed(i, "_", 2)[,2]), 1,3)
   if (haplo!="2.1" & haplo!="2.2"){ #PB samples are unphased
       haplo = "unphased"
   }
-  
+
   # read the assemblytics file
   assemblytics = read.table(paste0(dir, "/assemblytics/",i), stringsAsFactors = F)
   colnames(assemblytics) = c("ref_chr", "ref_start", "ref_end", "assemblytics_id","insert_size", "strand","type", "ref_gap_size" ,"q_gap_size" ,"assm_coords", "method", "adjusted_coords")
-  
-  
+
+
   ## ---------------------------------------------------------------------------------
   ## Part 1: Filter based on general features
-  
-  
+
+
   # remove INS if ref_gap_size is <-7kb or >1kb
   # assemblytics = assemblytics[(assemblytics$ref_gap_size>=(-7000) & assemblytics$ref_gap_size<=1000),]
 
   # calculate ref_gap_size to query_gap_size ratio
   assemblytics$gap_ratio = assemblytics$ref_gap_size/assemblytics$q_gap_size
-  
+
   # keep only primary chromosomes
   assemblytics = assemblytics[assemblytics$ref_chr %in% chr_list,]
-  
+
   # make a GRange object for assemblytics
   assemblytics.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end")
-  
+
   # filter based on segdup and sv blacklist
   assemblytics = removeSegdupSVblacklist(assemblytics, assemblytics.gr, segdup.gr, sv_bl.gr)
-  
+
   # remove redundant insertions
   #assemblytics = removeRedundantInsertion(assemblytics)
-  
-  
+
+
   ## ---------------------------------------------------------------------------------
   ## Part 2: Annotate bionano SV calls, adjust query coordinates, and overlap ngaps
-  
-  
+
+
   # read BN smap if file exists
   if (!(sample %in% BN_list)){ # if no optimal map for this particular sample
-    BN_sample = NULL 
+    BN_sample = NULL
   } else {
     BN_sample = readBN(sample, BN_path)
   }
-  
+
   # overlap BN SV size
-  assemblytics.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end") # Need a new GRange object 
+  assemblytics.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end") # Need a new GRange object
   assemblytics = overlapBN(BN_sample, assemblytics, assemblytics.gr)
-  
+
   # add BN_validate column based on BN calls
   assemblytics = BN_validate(assemblytics)
-  
+
   # adjust assm_coords for those with negative width
   assemblytics = processAssmCoords(assemblytics)
-  
+
   # adjust query start and end coordinates
   assemblytics = processAdjustedCoords(assemblytics)
-  
+
   # remove sequence if start and end coordinates are outside assembly scaffold coordinates
   assemblytics = checkAssmCoordsWithinLen(assemblytics, faidx, sample, haplo)
-  
+
   # overlap assemblytics INS with assembly ngaps
   if (haplo == "unphased") {
     ngapFileName = paste0(ngap_path, "/",sample, ".ngaps.bed")
     ngapFileSize = file.info(ngapFileName)$size
-    
+
     if (ngapFileSize==0){
       ngapFile = NULL
     } else {
@@ -190,7 +190,7 @@ processAlignment = function(i) {
     ngapFileName = paste0(ngap_path, "/",sample,"_pseudohap",haplo,".ngaps.bed")
     ngapFile = read.table(ngapFileName, stringsAsFactors = F)
   }
-  
+
   # actual overlap of Ngap
   assemblytics = overlapNgap(assemblytics, ngapFile)
 
@@ -202,21 +202,21 @@ processAlignment = function(i) {
   # Remove if ngap size is large and has no unique sequence
   assemblytics = assemblytics[(assemblytics$ngap == 0) | (assemblytics$ngap > 0 & (assemblytics$q_gap_size - assemblytics$ngap >= 50) & assemblytics$ngap < 10000) | (assemblytics$ngap_perct<0.5),]
 
-  
+
   ## ---------------------------------------------------------------------------------
   ## Clean up dataframe for writing output file
-  
-  
+
+
   # Remove unnecessary columns, add sample and haplo info
   assemblytics = assemblytics[order(assemblytics$ref_chr, assemblytics$ref_start),-which(names(assemblytics) %in% c("assemblytics_id", "type", "boundary_left_start", "boundary_left_end", "boundary_right_start", "boundary_right_end"))]
   assemblytics$sample = sample
   assemblytics$haplo = haplo
-  
+
   # Sort and reorder dataframe
-  assemblytics = assemblytics[order(assemblytics$ref_chr, assemblytics$ref_start), ] 
+  assemblytics = assemblytics[order(assemblytics$ref_chr, assemblytics$ref_start), ]
   assemblytics = assemblytics[,c("ref_chr","ref_start","ref_end","insert_size","strand","ref_gap_size","q_gap_size","assm_coords","assm_id","assm_start","assm_end", "scaffold_length", "adjusted_coords","adjusted_assm_start","adjusted_assm_end", "adjusted_insert_size", "gap_ratio","BN_size","label_dist","BN_start","BN_end","BN_enzyme","BN_validated","ngap","ngap_boundaries","ngap_boundaries_size_left","ngap_boundaries_size_right", "ngap_perct", "sample","haplo","method")]
-  
-  # Add INS_id to the last column 
+
+  # Add INS_id to the last column
   assemblytics$INS_id = paste0(sample,"_", haplo, "_", 1:nrow(assemblytics))
   
   # Turn off scientific notation
@@ -226,7 +226,13 @@ processAlignment = function(i) {
   
 }
 
-mclapply(assemblytics_list, processAlignment, mc.cores = threads)
+res = mclapply(assemblytics_list, processAlignment, mc.cores = threads)
+job_err = res[1:length(assemblytics_list)]
+stopifnot(length(which(grepl("Error", job_err)))==0)
 
-#mclapply(assemblytics_list[73], processAlignment, mc.cores = threads)
+
+#mclapply(assemblytics_list[1:50], processAlignment, mc.cores = threads)
+
+
+
 
