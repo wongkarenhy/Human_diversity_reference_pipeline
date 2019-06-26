@@ -70,7 +70,7 @@ comp_per_chr = sapply(assemblytics_combined_added, function(x) length(unique(x$c
 comp_per_chr_cumsum = c(0,cumsum(comp_per_chr)[-length(cumsum(comp_per_chr))])
 
 for (i in 1:length(assemblytics_combined_added)){
-  
+#for (i in 1){
     # adjust the component number
     assemblytics_combined_added[[i]]$component = assemblytics_combined_added[[i]]$component+comp_per_chr_cumsum[i]
     assemblytics_combined_added_df_per_chr = as.data.frame(assemblytics_combined_added[[i]], stringsAsFactors = F)
@@ -147,7 +147,8 @@ for (i in 1:length(assemblytics_combined_added)){
     doubleton = doubleton_df_odd$component[doubleton_df_odd$sample==doubleton_df_odd$even]
     singleton_per_chr_df = assemblytics_combined_added_df_per_chr[(assemblytics_combined_added_df_per_chr$component %in% c(singleton, doubleton)), ]
     # When output singleton, make sure every component is output exactly once (not twice as seen in both haplotypes)
-    singleton_per_chr_df = singleton_per_chr_df[-which(duplicated(singleton_per_chr_df$component)),]
+    rm_col = which(names(singleton_per_chr_df) %in% "scaffold_length")
+    singleton_per_chr_df = singleton_per_chr_df[-which(duplicated(singleton_per_chr_df$component)), -rm_col]
     
     # Remove singleton entries from the original dataframe
     assemblytics_combined_added_df_per_chr = assemblytics_combined_added_df_per_chr[!(assemblytics_combined_added_df_per_chr$component %in% c(singleton, doubleton)), ]
@@ -156,8 +157,8 @@ for (i in 1:length(assemblytics_combined_added)){
     large_comp = unique(assemblytics_combined_added_df_per_chr$component[assemblytics_combined_added_df_per_chr$insert_size>=50])
     
     # partition dataframe by size and chr
-    assemblytics_combined_added_df_per_chr_small = assemblytics_combined_added_df_per_chr[!(assemblytics_combined_added_df_per_chr$component %in% large_comp), ]
-    assemblytics_combined_added_df_per_chr_big = assemblytics_combined_added_df_per_chr[assemblytics_combined_added_df_per_chr$component %in% large_comp, ]
+    assemblytics_combined_added_df_per_chr_small = assemblytics_combined_added_df_per_chr[!(assemblytics_combined_added_df_per_chr$component %in% large_comp), -rm_col]
+    assemblytics_combined_added_df_per_chr_big = assemblytics_combined_added_df_per_chr[assemblytics_combined_added_df_per_chr$component %in% large_comp, -rm_col]
     
     # define chr
     chr = assemblytics_combined_added_df_per_chr_small$ref_chr[1]

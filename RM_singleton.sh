@@ -9,7 +9,8 @@ for i in ${CHR}; do
     # extract sequence
     bash ./scripts/retrieve_representative_seq.sh "singleton_chr${i}" "$WORKDIR" "${WORKDIR}/discovery/singleton/TMP_chr${i}" &   
     pids[${i}]=$!
-    
+    sleep 1m
+
 done
 
 # wait for all pids to finish

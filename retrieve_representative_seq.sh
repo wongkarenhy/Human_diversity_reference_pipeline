@@ -15,13 +15,12 @@ fi
 
 while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNOVA_VER ALT_NAME NUCMER_DIR POPULATION SRC PROJECT; do
     
-
     if [ "$SRC" = "10X" ]; then
         
-        awk -v SAMPLE="$SAMPLE" '$29==SAMPLE && $5=="-" && $30=="2.1" {print $9":"$14"-"$15}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_2.1_minus.tmp
-        awk -v SAMPLE="$SAMPLE" '$29==SAMPLE && $5=="-" && $30=="2.2" {print $9":"$14"-"$15}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_2.2_minus.tmp
-        awk -v SAMPLE="$SAMPLE" '$29==SAMPLE && $5=="+" && $30=="2.1" {print $9":"$14"-"$15}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_2.1_plus.tmp
-        awk -v SAMPLE="$SAMPLE" '$29==SAMPLE && $5=="+" && $30=="2.2" {print $9":"$14"-"$15}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_2.2_plus.tmp
+        awk -v SAMPLE="$SAMPLE" '$28==SAMPLE && $5=="-" && $29=="2.1" {print $9":"$13"-"$14}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_2.1_minus.tmp
+        awk -v SAMPLE="$SAMPLE" '$28==SAMPLE && $5=="-" && $29=="2.2" {print $9":"$13"-"$14}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_2.2_minus.tmp
+        awk -v SAMPLE="$SAMPLE" '$28==SAMPLE && $5=="+" && $29=="2.1" {print $9":"$13"-"$14}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_2.1_plus.tmp
+        awk -v SAMPLE="$SAMPLE" '$28==SAMPLE && $5=="+" && $29=="2.2" {print $9":"$13"-"$14}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_2.2_plus.tmp
     
         path_sample_name=$(sed 's:.*/::' <<< "$ASSM_DIR" | cut -d_ -f1)
 
@@ -51,8 +50,8 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
 
     else 
         
-        awk -v SAMPLE="$SAMPLE" '$29==SAMPLE && $5=="-" && $30=="unphased" {print $9":"$14"-"$15}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_unphased_minus.tmp
-        awk -v SAMPLE="$SAMPLE" '$29==SAMPLE && $5=="+" && $30=="unphased" {print $9":"$14"-"$15}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_unphased_plus.tmp
+        awk -v SAMPLE="$SAMPLE" '$28==SAMPLE && $5=="-" && $29=="unphased" {print $9":"$13"-"$14}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_unphased_minus.tmp
+        awk -v SAMPLE="$SAMPLE" '$28==SAMPLE && $5=="+" && $29=="unphased" {print $9":"$13"-"$14}' "$WORKDIR"/discovery/"$FILE_TYPE".txt > "$TMPDIR"/"$SAMPLE"_unphased_plus.tmp
 
         cat "$TMPDIR"/"$SAMPLE"_unphased_minus.tmp | xargs samtools faidx --reverse-complement --mark-strand no "$ASSM_DIR" | tr [a-z] [A-Z] >> "$WORKDIR"/discovery/final_fasta/"$FILE_TYPE".fa
         cat "$TMPDIR"/"$SAMPLE"_unphased_plus.tmp | xargs samtools faidx "$ASSM_DIR" | tr [a-z] [A-Z] >> "$WORKDIR"/discovery/final_fasta/"$FILE_TYPE".fa
