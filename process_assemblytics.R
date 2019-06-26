@@ -91,7 +91,7 @@ assemblytics_list = assemblytics_list[(assemblytics_list_sample %in% metadata$SA
 
 # get a list of samples with BN data
 BN_list = list.files(BN_path)
-BN_list = str_split_fixed(BN_list, "\\.|_", 2)[,1]
+#BN_list = str_split_fixed(BN_list, "\\.|_", 2)[,1]
 
 # read the fasta idx file
 faidx = fread(paste0(dir,"/discovery/tmp_idx.txt"), stringsAsFactors = F)
@@ -154,11 +154,18 @@ processAlignment = function(i) {
 
 
   # read BN smap if file exists
-  if (!(sample %in% BN_list)){ # if no optimal map for this particular sample
+  if (length(which(grepl(sample, BN_list)))!=1){ # if no optimal map for this particular sample
     BN_sample = NULL
   } else {
     BN_sample = readBN(sample, BN_path)
   }
+  
+  
+  # if (!(sample %in% BN_list)){ # if no optimal map for this particular sample
+  #   BN_sample = NULL
+  # } else {
+  #   BN_sample = readBN(sample, BN_path)
+  # }
 
   # overlap BN SV size
   assemblytics.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end") # Need a new GRange object
@@ -202,6 +209,11 @@ processAlignment = function(i) {
   # Remove if ngap size is large and has no unique sequence
   assemblytics = assemblytics[(assemblytics$ngap == 0) | (assemblytics$ngap > 0 & (assemblytics$q_gap_size - assemblytics$ngap >= 50) & assemblytics$ngap < 10000) | (assemblytics$ngap_perct<0.5),]
 
+  # Remove if assm coords are overlapping
+  assemblytics.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "assm_id", start.field = "adjusted_assm_start", end.field = "adjusted_assm_end")
+  ov = findOverlaps(assemblytics.gr, assemblytics.gr, type="any")
+  overlapping_coords = ov[ov@from!=ov@to]
+  assemblytics = assemblytics[-overlapping_coords@from,]
 
   ## ---------------------------------------------------------------------------------
   ## Clean up dataframe for writing output file

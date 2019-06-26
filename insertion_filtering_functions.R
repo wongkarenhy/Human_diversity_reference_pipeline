@@ -325,7 +325,7 @@ BN_validate = function(df){
     df$BN_validated[df$insert_size<=500] = -1
     
     # Finally, check the label_dist
-    df$BN_validated[df$label_dist>=40000 & df$BN_validated=="no"] = -1
+    #df$BN_validated[df$label_dist>=40000 & df$BN_validated=="no"] = -1
     
   }
   return(df)

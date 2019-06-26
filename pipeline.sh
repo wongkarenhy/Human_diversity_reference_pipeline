@@ -98,7 +98,7 @@ echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Repeatmasking singletons"
 bash ./scripts/RM_singleton.sh "$CHR" "$WORKDIR" "$CORES"
     
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Running multiple alignment for non-singleton insertions"
-bash ./scripts/run_multialign.sh "$CHR" "WORKDIR" "HG38_REF" "$CORES"
+bash ./scripts/run_multialign.sh "$CHR" "$WORKDIR" "HG38_REF" "$CORES"
   
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Processing multiple alignment results for non-singletons"
 Rscript ./scripts/process_multi_results.R -d "$WORKDIR"
