@@ -203,7 +203,7 @@ processAdjustedCoords = function(assemblytics){
     discard = NULL
     for (s in 1:length(neg_ref_gap_list)){
       
-      if (length(neg_ref_gap_list[[s]]!=2)){
+      if (length(neg_ref_gap_list[[s]])!=2){
           discard = c(discard, s)
           next
       }
