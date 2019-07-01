@@ -31,6 +31,7 @@ option_list = list(
   make_option(c("-t", "--threads"), action="store", default=NA, type='numeric',
               help="number of threads")
   
+  
 )
 opt = parse_args(OptionParser(option_list=option_list))
 ## ---------------------------------------------------------------------------------
@@ -50,18 +51,13 @@ processRepeatMasker = function(i) {
   
     comp = rep_seq$component[i]
     id = rep_seq$INS_id[i]
+    chr = rep_seq$ref_chr[i]
     
-    repeatRes <- try(read.table(paste0(dir, "/tmp/",comp,"/",comp,".fa.out"), stringsAsFactors = F, skip = 3, comment.char = "*"), silent = T)
+    repeatRes <- try(read.table(paste0(dir, "/tmp_",chr,"/",comp,"/",comp,".fa.out"), stringsAsFactors = F, skip = 3, comment.char = "*"), silent = T)
 
     if (inherits(repeatRes, 'try-error')){
         repeat_class = NA
     
-    #repeatRes = read.table(paste0(dir, "/tmp/",comp,"/",comp,".fa.out"), stringsAsFactors = F, skip = 3, comment.char = "*")
-    
-    #repeatRes = fread(paste0(dir, "/tmp/",comp,"/",comp,".fa.out"), stringsAsFactors = F, fill=TRUE, sep=' ')
-    
-    #if (nrow(repeatRes)==0){
-    #     repeat_class = NA
     } else{
       
       # add a header
@@ -79,7 +75,6 @@ processRepeatMasker = function(i) {
           repeat_class = names(which.max(tapply(target$repeat_len, target$repeat_class, sum)))
         
       }
-      
       
     }
     

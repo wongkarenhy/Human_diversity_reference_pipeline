@@ -85,7 +85,7 @@ bash ./scripts/run_assemblytics.sh "$CORES" "$WORKDIR" "$ASSEMBLYTICS"
     
 # Process assemblytics output
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Compiling assemblytics output"
-Rscript ./scripts/process_assemblytics.R -t "$CORES" -d "$WORKDIR" -b "$BN_SV7989" -n "$NGAPDIR"
+Rscript ./scripts/process_assemblytics.R -t "$CORES" -d "$WORKDIR" -b "$BN_SV7989" -n "$NGAPDIR" -c "$CHR"
     
 # Group individual assemblytics files
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Combining individual files"
@@ -128,6 +128,7 @@ seqtk comp assemblytics_representative_seq.fa | awk '{print $1, ($4+$5)/$2}' > g
 cd "$WORKDIR"
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Annotating insertionns"
 Rscript ./scripts/make_annotation.R -d "$WORKDIR" -t "$CORES" -r "$REFFLAT" -g "$GWAS"
+Rscript ./scripts/make_annotation_for_singleton.R -d "$WORKDIR" -t "$CORES" -r "$REFFLAT" -g "$GWAS" -c "$CHR"
 
 # Choose what insertions should be added to the new reference
 echo [`date +"%Y-%m-%d %H:%M:%S"`] "   * Choosing a high confident set of insertions"

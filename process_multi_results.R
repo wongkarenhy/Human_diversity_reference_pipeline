@@ -33,7 +33,10 @@ suppressMessages(library(plyr))
 option_list = list(
   
   make_option(c("-d", "--dir"), action="store", default=NA, type='character',
-              help="work directory")
+              help="work directory"),
+  make_option(c("-c", "--chr"), action="store", default=NA, type='character',
+              help="list of chromosomes")
+  
 
 )
 opt = parse_args(OptionParser(option_list=option_list))
@@ -41,12 +44,22 @@ opt = parse_args(OptionParser(option_list=option_list))
 
 # Parse user input
 dir = opt$dir
+chr_list = opt$chr
 
 # load up functions 
 source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 
 # read multi-alignment results and sort by component number
-res = fread(paste0(dir, "/multi_results.csv"), stringsAsFactors = F, drop = 3)
+res = NULL
+for (i in 1:length(chr_list)){
+  
+  chr = chr_list[i]
+  # Read individual processed assemblytics file
+  res[[i]] = fread(paste0(dir, "/discovery/multi_results_chr",chr,".csv"), stringsAsFactors = F, drop = 3)
+
+}
+
+res = ldply(res, data.frame)
 colnames(res) = c("component", "group")
 res = res[order(res$component),]
 
