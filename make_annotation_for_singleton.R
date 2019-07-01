@@ -40,9 +40,7 @@ option_list = list(
   make_option(c("-r", "--refFlat"), action="store", default=NA, type='character',
               help="path to refFlat file containing gene info"),
   make_option(c("-g", "--gwas"), action="store", default=NA, type='character',
-              help="path to gwas variant file"),
-  make_option(c("-c", "--chr"), action="store", default=NA, type='character',
-              help="list of chromosomes")  
+              help="path to gwas variant file")
   
 )
 
@@ -54,7 +52,6 @@ dir = opt$dir
 threads = opt$threads
 refFlat = opt$refFlat
 gwas = opt$gwas
-chr_list = opt$chr
 
 # load up functions 
 source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
@@ -64,6 +61,9 @@ source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 #gwas="../../../../KwokRaid02/karen/database/gwasCatalog.txt"
 
 # ------------------------------------------------------------ Annotation --------------------------------------------------------------
+# define primary chr_list
+chr_list = c(paste0("chr",c(1:22, "X", "Y")))
+
 # read input sequences and databases
 rep_seq = NULL
 seqtk = NULL

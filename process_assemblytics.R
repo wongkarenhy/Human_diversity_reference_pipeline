@@ -61,9 +61,7 @@ option_list = list(
     make_option(c("-b", "--bn_path"), action="store", default=NA, type='character',
                 help="path to the BN SV7989 folder"),
     make_option(c("-n", "--ngap"), action="store", default=NA, type='character',
-                help="path to assembly ngap folder"),
-    make_option(c("-c", "--chr"), action="store", default=NA, type='character',
-                help="list of chromosomes")
+                help="path to assembly ngap folder")
   
 )
 
@@ -76,7 +74,6 @@ threads = opt$threads
 dir = opt$dir
 BN_path = opt$bn_path
 ngap_path = opt$ngap
-chr_list = opt$chr
 
 # load up functions 
 source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
@@ -109,7 +106,7 @@ segdup.gr = makeGRangesFromDataFrame(segdup, seqnames.field = "V1", start.field 
 sv_bl.gr = makeGRangesFromDataFrame(sv_bl, seqnames.field = "V1", start.field = "V2", end.field = "V3")
 
 # define primary chr_list
-#chr_list = c(paste0("chr",c(1:22, "X", "Y")))
+chr_list = c(paste0("chr",c(1:22, "X", "Y")))
 
 processAlignment = function(i) {
   
