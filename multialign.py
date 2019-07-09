@@ -164,6 +164,9 @@ class multi_align:
 						
 			new_title,new_alignments=[],[]
 
+			if len(matches)!=len(self.alignments):
+				matches=[0]*len(self.alignments)
+
 			
 			for match,title,alignment in zip(matches,self.titles,self.alignments):
 				if match<=0:
@@ -223,13 +226,18 @@ def generate_files(insertions,tempfolder,refpath):
 
 		
 	cmds=[]
-	
+	skipfiles=[]
 	for name, assem_path,scaffold,start,end,ref_chr,ref_start,ref_end,std in zip(insert_name,assem_pathes,scaffolds,starts,ends,ref_chrs,ref_starts,ref_ends,strands):
 
 		if anchor_size>0:
 			nextline=''
 		else:
 			nextline='\n'
+
+		if start==end:
+
+			skipfiles.append('>%s_%d_%d'%(name,abs(ref_start-cutstart),abs(end-start)))
+			continue
 		
 
 		cmd='printf \">%s_%d_%d\n\" >> %s'%(name,abs(ref_start-cutstart),abs(end-start),componentfile)
@@ -260,6 +268,12 @@ def generate_files(insertions,tempfolder,refpath):
 	
 	print 'creating temp sequences file for %s'%componentfile
 
+
+	if cmds==[]:
+
+		return 'pass',skipfiles
+
+
 	map(os.system,cmds)
 
 
@@ -284,7 +298,7 @@ def generate_files(insertions,tempfolder,refpath):
 		iter0+=1	
 
 	if os.path.isfile(componentfile+'_out')==False:
-		return "fail"
+		return "fail",[]
 
 	print 'integrating both files %s'%(componentfile+'_out')
 
@@ -317,7 +331,7 @@ def generate_files(insertions,tempfolder,refpath):
 	
 	
 
-	return componentfile
+	return componentfile,skipfiles
 		
 	
 	
@@ -345,56 +359,69 @@ def compare(insertions):
 		
 	else:
 	
-		componentfile=generate_files(insertions,tempfolder,refpath)
+		componentfile,skipfiles=generate_files(insertions,tempfolder,refpath)
+
+
 
 		if componentfile=='fail':
+
+			print 'encounting error in component #' + str(component)
+
 			return component
 
-		print 'grouping %s'%componentfile
+		elif componentfile=='pass':
 
-		with open(componentfile+'_out',mode='r') as f:
-			reads=f.read().split('>')[1:]
-		f.close()
+			print 'passing component #' + str(component)
 
-		reads_ori=''		
-
-		title_seq=[[x.splitlines()[0],list(''.join(x.splitlines()[1:]))] for x in reads]
-
-
-		unique_sizes=[len(seq[1])-seq[1].count('N')-seq[1].count('-') for seq in title_seq]
-
-		titles_seqs_unique_sizes=map(list,zip(*sorted([title_seq0+[unique_size] for title_seq0, unique_size in zip(title_seq, unique_sizes) if unique_size>0],key=lambda x:x[-1], reverse=True)))
-
-
-		if len(titles_seqs_unique_sizes)>0:
-			titles,seqs,unique_sizes=titles_seqs_unique_sizes
+			multi=[]
 
 		else:
-			titles,seqs,unique_sizes=[],[],[]
 
-		title_filtered=[x for x in zip(*title_seq)[0] if x not in  titles]
+			print 'grouping %s'%componentfile
+
+			with open(componentfile+'_out',mode='r') as f:
+				reads=f.read().split('>')[1:]
+			f.close()
+
+			reads_ori=''		
+
+			title_seq=[[x.splitlines()[0],list(''.join(x.splitlines()[1:]))] for x in reads]
 
 
-		print 'filtered sequence: ',title_filtered
+			unique_sizes=[len(seq[1])-seq[1].count('N')-seq[1].count('-') for seq in title_seq]
+
+			titles_seqs_unique_sizes=map(list,zip(*sorted([title_seq0+[unique_size] for title_seq0, unique_size in zip(title_seq, unique_sizes) if unique_size>0],key=lambda x:x[-1], reverse=True)))
 
 
-		del titles_seqs_unique_sizes, title_seq, reads_ori, reads, unique_sizes
+			if len(titles_seqs_unique_sizes)>0:
+				titles,seqs,unique_sizes=titles_seqs_unique_sizes
+
+			else:
+				titles,seqs,unique_sizes=[],[],[]
+
+			title_filtered=[x for x in zip(*title_seq)[0] if x not in  titles]
 
 
-		if len(titles)>1:
+			print 'filtered sequence: ',title_filtered
 
-			multi=multi_align(titles, seqs).group().values()
 
-		else:
-			multi=[titles]
+			del titles_seqs_unique_sizes, title_seq, reads_ori, reads, unique_sizes
 
-	print 'outputing results %s'%componentfile
+
+			if len(titles)>1:
+
+				multi=multi_align(titles, seqs).group().values()
+
+			else:
+				multi=[titles]
+
+			print 'outputing results %s'%componentfile
 
 
 #	if title_filtered==[]:
 		#title_filtered=['NA']
 
-	report=','.join([';'.join(['_'.join(x.split("_")[:-2]) for x in titles]) for titles in multi])+'\t'+';'.join(title_filtered)
+	report=','.join([';'.join(['_'.join(x.split("_")[:-2]) for x in titles]) for titles in multi])+'\t'+';'.join(['_'.join(x.split("_")[:-2]) for x in title_filtered+skipfiles])
 
 	lock1.acquire()
 	with open(outputfile, mode='a') as f:
@@ -409,7 +436,7 @@ def run(args):
 	
 	inputfile=args.inputcsv
 	metafile=args.metafile
-	
+	testmode=args.testmode
 	
 	m0=int(args.threads)
 	
@@ -448,7 +475,7 @@ def run(args):
 
 	print 'total components:', len(allcomponent)
 	
-	if 1==0:
+	if testmode==1:
 		for component in allcomponent:
 			compare(component)
 
@@ -474,6 +501,8 @@ def main():
 	parser.add_argument("-m","--metafile",help="path metafile" ,dest="metafile",type=str,default='./TMP_sample_metadata.txt')
 	parser.add_argument("-n","--threads",help="number of threads" ,dest="threads",type=str,default='8')
 	parser.add_argument("-a","--anchor",help="size of anchor" ,dest="anchor",type=str,default='50')
+	parser.add_argument("-T","--test",help="testmode" ,dest="testmode",type=int,default=0)
+
 	parser.set_defaults(func=run)
 	args=parser.parse_args()
 	args.func(args)
