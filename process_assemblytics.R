@@ -231,6 +231,13 @@ processAlignment = function(i) {
   overlapping_coords = ov[ov@from!=ov@to]
   assemblytics = assemblytics[-overlapping_coords@from,]
 
+  # Remove if extreme gap sizes and small overall insert size
+  disc = which((assemblytics$ref_gap_size>5000 | assemblytics$ref_gap_size< (-5000)) & assemblytics$insert_size<50)
+  if (length(disc)!=0){
+    assemblytics = assemblytics[-disc,]
+    
+  }
+  
   ## ---------------------------------------------------------------------------------
   ## Clean up dataframe for writing output file
 
