@@ -189,8 +189,42 @@ processAdjustedCoords = function(assemblytics){
     if (length(discard)>0){
       assemblytics = assemblytics[-discard,]
     }
+    
     assemblytics$adjusted_assm_start = NA
     assemblytics$adjusted_assm_end = NA
+    assemblytics$adjusted_insert_size = NA
+    
+    assemblytics$split_ad_coords_1 = str_split_fixed(assemblytics$adjusted_coords, ";",2)[,1]
+    assemblytics$split_ad_coords_2 = str_split_fixed(assemblytics$adjusted_coords, ";",2)[,2]
+    
+    assemblytics$split_ad_coords_1 = as.numeric(str_split_fixed(assemblytics$split_ad_coords_1, "-",2)[,2]) - as.numeric(str_split_fixed(assemblytics$split_ad_coords_1, "-",2)[,1])
+    assemblytics$split_ad_coords_2 = as.numeric(str_split_fixed(assemblytics$split_ad_coords_2, "-",2)[,2]) - as.numeric(str_split_fixed(assemblytics$split_ad_coords_2, "-",2)[,1])
+    
+    assemblytics$coords_1_orientation = ifelse(assemblytics$split_ad_coords_1<0, -1,1)
+    assemblytics$coords_2_orientation = ifelse(assemblytics$split_ad_coords_2<0, -1,1)
+    
+    assemblytics$split_sort_coords_2 = sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(x)[2])
+    assemblytics$split_sort_coords_3 = sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(x)[3])
+    
+    disc = which(assemblytics$coords_1_orientation!=assemblytics$coords_2_orientation | assemblytics$split_sort_coords_2!=assemblytics$assm_start | assemblytics$split_sort_coords_3!=assemblytics$assm_end)
+    
+    if (length(disc)!=0){
+      assemblytics = assemblytics[-disc,]
+    }
+    
+    assemblytics$adjusted_assm_start = ifelse(assemblytics$adjusted_coords!=".", sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(x)[1]), assemblytics$assm_start)
+    assemblytics$adjusted_assm_end = ifelse(assemblytics$adjusted_coords!=".", sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(x)[4]), assemblytics$assm_end)
+    
+    
+    # make sure there are no more than 2 sets of coords in assemblytics$adjusted_coords
+    disc = which(sapply(strsplit(assemblytics$adjusted_coords, ";"), length)>2)
+    if (length(disc)!=0){
+      assemblytics = assemblytics[-disc,]
+    }
+    
+    # **5. Add a column called adjusted insert size
+    assemblytics$adjusted_insert_size = as.numeric(assemblytics$adjusted_assm_end) - as.numeric(assemblytics$adjusted_assm_start)
+    assemblytics = assemblytics[,1:(ncol(assemblytics)-6)]
     
     # **2. Split assemblytics into 2 dataframes (negative ref_gap_size and positive ref_gap_size)
     # we will only use the adjusted_coordinates column for neg_ref_gap

@@ -485,6 +485,10 @@ def run(args):
 	p=mul.Pool(processes=m0)
 	
 	failed=p.map(compare,allcomponent)
+
+	p.close()
+	p.join()
+
 	
 	return 0	
 

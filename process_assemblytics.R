@@ -75,6 +75,10 @@ dir = opt$dir
 BN_path = opt$bn_path
 ngap_path = opt$ngap
 
+#dir="../"
+#BN_path = "../../../../KwokRaid02/karen/database/BN_SV7989_same_optArgs/smap/"
+#ngap_path = "../../../../KwokRaid04/assembly_ngap/"
+
 # load up functions 
 source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 
@@ -209,6 +213,18 @@ processAlignment = function(i) {
   # Remove if ngap size is large and has no unique sequence
   assemblytics = assemblytics[(assemblytics$ngap == 0) | (assemblytics$ngap > 0 & (assemblytics$q_gap_size - assemblytics$ngap >= 50) & assemblytics$ngap < 10000) | (assemblytics$ngap_perct<0.5),]
 
+  # Remove if Ngaps are at boundaries
+  assemblytics = assemblytics[assemblytics$ngap_boundaries!="yes",]
+  
+  # Remove if insert_size is >2kb but no BN support at all
+  if (!all(assemblytics$BN_validated==-1)){
+    disc = which(assemblytics$insert_size>2000 & assemblytics$BN_validated==-1)
+    if (length(disc!=0)){
+      assemblytics = assemblytics[-disc,]
+    }
+  }
+  
+  
   # Remove if assm coords are overlapping
   assemblytics.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "assm_id", start.field = "adjusted_assm_start", end.field = "adjusted_assm_end")
   ov = findOverlaps(assemblytics.gr, assemblytics.gr, type="any")
@@ -233,7 +249,7 @@ processAlignment = function(i) {
   
   # Turn off scientific notation
   options(scipen=999)
-  write.table(assemblytics, paste0(dir, "/discovery/raw/",sample, "_", haplo,"_assemblytics_raw_results.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
+  write.table(assemblytics, paste0(dir, "/discovery/raw/",sample, "_", haplo,"_assemblytics_raw_results_updated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
   
   
 }
