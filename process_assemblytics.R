@@ -95,7 +95,6 @@ assemblytics_list = assemblytics_list[(assemblytics_list_sample %in% metadata$SA
 
 # get a list of samples with BN data
 BN_list = list.files(BN_path)
-#BN_list = str_split_fixed(BN_list, "\\.|_", 2)[,1]
 
 # read the fasta idx file
 faidx = fread(paste0(dir,"/discovery/tmp_idx.txt"), stringsAsFactors = F)
@@ -126,9 +125,8 @@ processAlignment = function(i) {
   }
 
   # read the assemblytics file
-  assemblytics = read.table(paste0(dir, "/assemblytics/",i), stringsAsFactors = F)
-  colnames(assemblytics) = c("ref_chr", "ref_start", "ref_end", "assemblytics_id","insert_size", "strand","type", "ref_gap_size" ,"q_gap_size" ,"assm_coords", "method", "adjusted_coords")
-
+  assemblytics = read.table(paste0(dir, "/assemblytics/",i), stringsAsFactors = F, sep = '\t')
+  colnames(assemblytics) = c("ref_chr", "ref_start", "ref_end", "assemblytics_id","insert_size", "strand","type", "ref_gap_size" ,"q_gap_size" ,"assm_coords", "method", "adjusted_coords", "anchors_r")
 
   ## ---------------------------------------------------------------------------------
   ## Part 1: Filter based on general features
@@ -149,6 +147,9 @@ processAlignment = function(i) {
   # filter based on segdup and sv blacklist
   assemblytics = removeSegdupSVblacklist(assemblytics, assemblytics.gr, segdup.gr, sv_bl.gr)
 
+  # Reduce redundant insertions
+  assemblytics = reduceIdenticalRefCoords(assemblytics)
+  
   # remove redundant insertions
   #assemblytics = removeRedundantInsertion(assemblytics)
 
@@ -164,16 +165,9 @@ processAlignment = function(i) {
     BN_sample = readBN(sample, BN_path)
   }
   
-  
-  # if (!(sample %in% BN_list)){ # if no optimal map for this particular sample
-  #   BN_sample = NULL
-  # } else {
-  #   BN_sample = readBN(sample, BN_path)
-  # }
-
   # overlap BN SV size
   assemblytics.gr = makeGRangesFromDataFrame(assemblytics, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end") # Need a new GRange object
-  assemblytics = overlapBN(BN_sample, assemblytics, assemblytics.gr)
+  assemblytics = overlapBN(BN_sample, assemblytics, assemblytics.gr, metadata, sample)
 
   # add BN_validate column based on BN calls
   assemblytics = BN_validate(assemblytics)
@@ -184,6 +178,10 @@ processAlignment = function(i) {
   # adjust query start and end coordinates
   assemblytics = processAdjustedCoords(assemblytics)
 
+  # process anchor alignment block
+  # assemblytics = processAnchorAln(assemblytics)
+  
+  
   # remove sequence if start and end coordinates are outside assembly scaffold coordinates
   assemblytics = checkAssmCoordsWithinLen(assemblytics, faidx, sample, haplo)
 
@@ -205,7 +203,6 @@ processAlignment = function(i) {
   # actual overlap of Ngap
   assemblytics = overlapNgap(assemblytics, ngapFile)
 
-  
   ## ---------------------------------------------------------------------------------
   ## Part 3: Filter based on ngaps
   
@@ -214,11 +211,11 @@ processAlignment = function(i) {
   assemblytics = assemblytics[(assemblytics$ngap == 0) | (assemblytics$ngap > 0 & (assemblytics$q_gap_size - assemblytics$ngap >= 50) & assemblytics$ngap < 10000) | (assemblytics$ngap_perct<0.5),]
 
   # Remove if Ngaps are at boundaries
-  assemblytics = assemblytics[assemblytics$ngap_boundaries!="yes",]
+  #assemblytics = assemblytics[assemblytics$ngap_boundaries_size_left!="yes",]
   
-  # Remove if insert_size is >2kb but no BN support at all
+  # Remove if insert_size is >2kb, no BN support at all, and ref_gap_size is larger than 10kb
   if (!all(assemblytics$BN_validated==-1)){
-    disc = which(assemblytics$insert_size>2000 & assemblytics$BN_validated==-1)
+    disc = which(assemblytics$insert_size>2000 & assemblytics$BN_validated==-1 & abs(assemblytics$ref_gap_size)>=5000)
     if (length(disc!=0)){
       assemblytics = assemblytics[-disc,]
     }
@@ -231,8 +228,8 @@ processAlignment = function(i) {
   overlapping_coords = ov[ov@from!=ov@to]
   assemblytics = assemblytics[-overlapping_coords@from,]
 
-  # Remove if extreme gap sizes and small overall insert size
-  disc = which((assemblytics$ref_gap_size>5000 | assemblytics$ref_gap_size< (-5000)) & assemblytics$insert_size<50)
+  # Remove if extreme gap sizes and small overall insert size (mostly to improve speed downstream)
+  disc = which((abs(assemblytics$ref_gap_size)>5000  & assemblytics$insert_size<100) | (abs(assemblytics$ref_gap_size)>10000  & assemblytics$insert_size<1000))
   if (length(disc)!=0){
     assemblytics = assemblytics[-disc,]
     
@@ -241,7 +238,9 @@ processAlignment = function(i) {
   ## ---------------------------------------------------------------------------------
   ## Clean up dataframe for writing output file
 
-
+  # Remove white spaces in the anchors_r column
+  assemblytics$anchors_r = gsub('\\[|\\]|\\s+', '', assemblytics$anchors_r)
+  
   # Remove unnecessary columns, add sample and haplo info
   assemblytics = assemblytics[order(assemblytics$ref_chr, assemblytics$ref_start),-which(names(assemblytics) %in% c("assemblytics_id", "type", "boundary_left_start", "boundary_left_end", "boundary_right_start", "boundary_right_end"))]
   assemblytics$sample = sample
@@ -249,14 +248,14 @@ processAlignment = function(i) {
 
   # Sort and reorder dataframe
   assemblytics = assemblytics[order(assemblytics$ref_chr, assemblytics$ref_start), ]
-  assemblytics = assemblytics[,c("ref_chr","ref_start","ref_end","insert_size","strand","ref_gap_size","q_gap_size","assm_coords","assm_id","assm_start","assm_end", "scaffold_length", "adjusted_coords","adjusted_assm_start","adjusted_assm_end", "adjusted_insert_size", "gap_ratio","BN_size","label_dist","BN_start","BN_end","BN_enzyme","BN_validated","ngap","ngap_boundaries","ngap_boundaries_size_left","ngap_boundaries_size_right", "ngap_perct", "sample","haplo","method")]
+  assemblytics = assemblytics[,c("ref_chr","ref_start","ref_end","insert_size","strand","ref_gap_size","q_gap_size","assm_coords","assm_id","assm_start","assm_end", "scaffold_length", "adjusted_coords","adjusted_assm_start","adjusted_assm_end", "adjusted_insert_size", "gap_ratio","BN_size","label_dist","BN_start","BN_end","BN_enzyme","BN_validated","ngap","ngap_boundaries","ngap_boundaries_size_left","ngap_boundaries_size_right","ngap_perct","sample","haplo","method","anchors_r")]
 
   # Add INS_id to the last column
   assemblytics$INS_id = paste0(sample,"_", haplo, "_", 1:nrow(assemblytics))
   
   # Turn off scientific notation
   options(scipen=999)
-  write.table(assemblytics, paste0(dir, "/discovery/raw/",sample, "_", haplo,"_assemblytics_raw_results_updated.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
+  write.table(assemblytics, paste0(dir, "/discovery/raw/",sample, "_", haplo,"_assemblytics_raw_results.txt"), col.names = T, row.names = F, quote = F, sep = '\t')
   
   
 }

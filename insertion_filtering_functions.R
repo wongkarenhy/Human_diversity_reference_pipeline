@@ -38,7 +38,7 @@ removeSegdupSVblacklist = function(assemblytics, assemblytics.gr, segdup.gr, sv_
 }
 
 
-overlapBN = function(BN_sample, assemblytics, assemblytics.gr){
+overlapBN = function(BN_sample, assemblytics, assemblytics.gr, metadata, sample){
   assemblytics$BN_size = 0
   assemblytics$label_dist = 0
   assemblytics$BN_start = NA # This start corresponds to the reference position
@@ -46,6 +46,9 @@ overlapBN = function(BN_sample, assemblytics, assemblytics.gr){
   assemblytics$BN_enzyme = NA
   
   if (!is.null(BN_sample)){
+    
+    # Add BN_enzyme to all entries
+    #assemblytics$BN_enzyme = metadata$ENZYME[grep(sample, metadata$SAMPLE)]
     
     # Find overlap between the assemblytics and BN
     # Need to recreate assemblytics.gr
@@ -141,7 +144,11 @@ overlapNgap = function(assemblytics, ngapFile) {
     assemblytics$ngap_boundaries_size_right[assemblytics_boundary_right_ngap_ov@from] = ngapFile$ngap_size[assemblytics_boundary_right_ngap_ov@to]
     
     # Only keep if insert_size is larger than ngap
-    assemblytics = assemblytics[assemblytics$insert_size > assemblytics$ngap, ]
+    assemblytics = assemblytics[(assemblytics$insert_size-1) > assemblytics$ngap, ]
+    #assemblytics = assemblytics[(assemblytics$insert_size-1) > assemblytics$ngap & (assemblytics$q_gap_size-1 > assemblytics$ngap), ]
+    
+    # ngap_boundaries have to be smaller than 1000bp
+    assemblytics = assemblytics[(assemblytics$ngap_boundaries_size_left<1000) & (assemblytics$ngap_boundaries_size_right<1000),]
     
   }
   
@@ -151,19 +158,25 @@ overlapNgap = function(assemblytics, ngapFile) {
 }
 
 
-# Remove redundant ref coordinates
-removeRedundantInsertion = function(assemblytics){
-  
-  dup_start = names(which(table(assemblytics$ref_start) > 1))
-  dup_end = names(which(table(assemblytics$ref_end) > 1))
-  
-  assemblytics = assemblytics[(!assemblytics$ref_start %in% dup_start) & (!assemblytics$ref_end %in% dup_end),]
-  #df = assemblytics[(assemblytics$ref_start %in% dup_start) | (assemblytics$ref_end %in% dup_end),]
-  #keep = which(!duplicated(assemblytics[,c("ref_chr", "ref_start", "ref_end")]))
-  #assemblytics = assemblytics[keep,]
-  
-  return(assemblytics)
+# Reduce identical ref coords
+reduceIdenticalRefCoords = function(assemblytics){
+    dup = which(duplicated(assemblytics[,c("ref_chr", "ref_start", "ref_end", "insert_size")]))
+    assemblytics = assemblytics[-dup,]
+    return(assemblytics)
 }
+
+# removeRedundantInsertion = function(assemblytics){
+#   
+#   dup_start = names(which(table(assemblytics$ref_start) > 1))
+#   dup_end = names(which(table(assemblytics$ref_end) > 1))
+#   
+#   assemblytics = assemblytics[(!assemblytics$ref_start %in% dup_start) & (!assemblytics$ref_end %in% dup_end),]
+#   #df = assemblytics[(assemblytics$ref_start %in% dup_start) | (assemblytics$ref_end %in% dup_end),]
+#   #keep = which(!duplicated(assemblytics[,c("ref_chr", "ref_start", "ref_end")]))
+#   #assemblytics = assemblytics[keep,]
+#   
+#   return(assemblytics)
+# }
 
 processAssmCoords = function(assemblytics){
     
@@ -183,100 +196,41 @@ processAssmCoords = function(assemblytics){
 
 processAdjustedCoords = function(assemblytics){
   
+    assemblytics$adjusted_coords = ifelse(assemblytics$method=="between_alignments" & assemblytics$ref_gap_size<0, assemblytics$adjusted_coords, ".")
+    
     # Parse the adjusted_coordinates column
     # **1. Remove INS if adjusted_coordinates can't be computed given ref_gap_size is negative
-    discard = grep("\\[", assemblytics$adjusted_coords)
-    if (length(discard)>0){
-      assemblytics = assemblytics[-discard,]
-    }
-    
+    disc = grep("\\[", assemblytics$adjusted_coords)
+
+    # Remove if more than 2 sets of adjusted coords
+    disc = c(disc, which(sapply(strsplit(assemblytics$adjusted_coords, ";"), length) >2))
+
     assemblytics$adjusted_assm_start = NA
     assemblytics$adjusted_assm_end = NA
     assemblytics$adjusted_insert_size = NA
     
-    assemblytics$split_ad_coords_1 = str_split_fixed(assemblytics$adjusted_coords, ";",2)[,1]
-    assemblytics$split_ad_coords_2 = str_split_fixed(assemblytics$adjusted_coords, ";",2)[,2]
+    assemblytics$split_ad_coords_l = str_split_fixed(assemblytics$adjusted_coords, ";",2)[,1]
+    assemblytics$split_ad_coords_r = str_split_fixed(assemblytics$adjusted_coords, ";",2)[,2]
     
-    assemblytics$split_ad_coords_1 = as.numeric(str_split_fixed(assemblytics$split_ad_coords_1, "-",2)[,2]) - as.numeric(str_split_fixed(assemblytics$split_ad_coords_1, "-",2)[,1])
-    assemblytics$split_ad_coords_2 = as.numeric(str_split_fixed(assemblytics$split_ad_coords_2, "-",2)[,2]) - as.numeric(str_split_fixed(assemblytics$split_ad_coords_2, "-",2)[,1])
+    assemblytics$split_ad_coords_l = as.numeric(str_split_fixed(assemblytics$split_ad_coords_l, "-",2)[,2]) - as.numeric(str_split_fixed(assemblytics$split_ad_coords_l, "-",2)[,1])
+    assemblytics$split_ad_coords_r = as.numeric(str_split_fixed(assemblytics$split_ad_coords_r, "-",2)[,2]) - as.numeric(str_split_fixed(assemblytics$split_ad_coords_r, "-",2)[,1])
     
-    assemblytics$coords_1_orientation = ifelse(assemblytics$split_ad_coords_1<0, -1,1)
-    assemblytics$coords_2_orientation = ifelse(assemblytics$split_ad_coords_2<0, -1,1)
+    assemblytics$split_sort_coords_l = sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(as.numeric(x))[2])
+    assemblytics$split_sort_coords_r = sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(as.numeric(x))[3])
     
-    assemblytics$split_sort_coords_2 = sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(x)[2])
-    assemblytics$split_sort_coords_3 = sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(x)[3])
-    
-    disc = which(assemblytics$coords_1_orientation!=assemblytics$coords_2_orientation | assemblytics$split_sort_coords_2!=assemblytics$assm_start | assemblytics$split_sort_coords_3!=assemblytics$assm_end)
+    disc = c(disc, which((assemblytics$split_ad_coords_l*assemblytics$split_ad_coords_r<0) | assemblytics$split_sort_coords_l!=assemblytics$assm_start | assemblytics$split_sort_coords_r!=assemblytics$assm_end))
     
     if (length(disc)!=0){
-      assemblytics = assemblytics[-disc,]
+      assemblytics = assemblytics[-unique(disc),]
     }
     
-    assemblytics$adjusted_assm_start = ifelse(assemblytics$adjusted_coords!=".", sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(x)[1]), assemblytics$assm_start)
-    assemblytics$adjusted_assm_end = ifelse(assemblytics$adjusted_coords!=".", sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(x)[4]), assemblytics$assm_end)
+    assemblytics$adjusted_assm_start = ifelse(assemblytics$adjusted_coords!=".", sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(as.numeric(x))[1]), assemblytics$assm_start)
+    assemblytics$adjusted_assm_end = ifelse(assemblytics$adjusted_coords!=".", sapply(strsplit(assemblytics$adjusted_coords, ";|-"), function(x) sort(as.numeric(x))[4]), assemblytics$assm_end)
     
-    
-    # make sure there are no more than 2 sets of coords in assemblytics$adjusted_coords
-    disc = which(sapply(strsplit(assemblytics$adjusted_coords, ";"), length)>2)
-    if (length(disc)!=0){
-      assemblytics = assemblytics[-disc,]
-    }
     
     # **5. Add a column called adjusted insert size
     assemblytics$adjusted_insert_size = as.numeric(assemblytics$adjusted_assm_end) - as.numeric(assemblytics$adjusted_assm_start)
-    assemblytics = assemblytics[,1:(ncol(assemblytics)-6)]
-    
-    # **2. Split assemblytics into 2 dataframes (negative ref_gap_size and positive ref_gap_size)
-    # we will only use the adjusted_coordinates column for neg_ref_gap
-    neg_ref_gap = assemblytics[assemblytics$ref_gap_size<0,]
-    pos_ref_gap = assemblytics[assemblytics$ref_gap_size>=0,]
-    
-    # **2. Make sure only two sets of coordinates are reported
-    # in neg_ref_gap, we need to make sure assm_start and assm_end are found in the adjusted_coordinates column
-    neg_ref_gap_list = sapply(strsplit(neg_ref_gap$adjusted_coords, ";"), unique)
-    discard = NULL
-    for (s in 1:length(neg_ref_gap_list)){
-      
-      if (length(neg_ref_gap_list[[s]])!=2){
-          discard = c(discard, s)
-          next
-      }
-      
-      startPattern = neg_ref_gap$assm_start[s]
-      endPattern = neg_ref_gap$assm_end[s]
-      
-      adjusted_assm_start = str_split_fixed(neg_ref_gap_list[[s]][grep(startPattern,neg_ref_gap_list[[s]])], "-", 2)
-      if (nrow(adjusted_assm_start)==1) {
-        neg_ref_gap$adjusted_assm_start[s] = adjusted_assm_start[which(adjusted_assm_start != startPattern)]
-      } else if (nrow(adjusted_assm_start)==2) {
-        neg_ref_gap$adjusted_assm_start[s] = min(adjusted_assm_start[which(!adjusted_assm_start %in% startPattern)])
-        neg_ref_gap$adjusted_assm_end[s] = max(adjusted_assm_start[which(!adjusted_assm_start %in% startPattern)])
-        next
-      }
-      else discard = c(discard, s)
-      
-      adjusted_assm_end = str_split_fixed(neg_ref_gap_list[[s]][grep(endPattern,neg_ref_gap_list[[s]])], "-", 2)
-      if (nrow(adjusted_assm_end)==1) neg_ref_gap$adjusted_assm_end[s] = adjusted_assm_end[which(adjusted_assm_end != endPattern)]
-      else discard = c(discard, s)
-    }
-    neg_ref_gap = neg_ref_gap[-discard,]
-    
-    neg_ref_gap$tmp_s = as.numeric(neg_ref_gap$adjusted_assm_start)
-    neg_ref_gap$tmp_e = as.numeric(neg_ref_gap$adjusted_assm_end)
-    
-    neg_ref_gap$adjusted_assm_end[(neg_ref_gap$tmp_e < neg_ref_gap$tmp_s)] = neg_ref_gap$tmp_s[(neg_ref_gap$tmp_e < neg_ref_gap$tmp_s)]
-    neg_ref_gap$adjusted_assm_start[(neg_ref_gap$tmp_e < neg_ref_gap$tmp_s)] = neg_ref_gap$tmp_e[(neg_ref_gap$tmp_e < neg_ref_gap$tmp_s)]
-    neg_ref_gap = subset(neg_ref_gap, select = -c(tmp_s, tmp_e))
-    
-    # **3. If pos_ref_gap, adjusted_assm_start and adjusted_assm_end are identical to assm_start and assm_end
-    pos_ref_gap$adjusted_assm_start = as.numeric(pos_ref_gap$assm_start)
-    pos_ref_gap$adjusted_assm_end = as.numeric(pos_ref_gap$assm_end)
-    
-    # **4. Put the two lists together
-    assemblytics = rbind.data.frame(pos_ref_gap, neg_ref_gap, stringsAsFactors = F)
-    
-    # **5. Add a column called adjusted insert size
-    assemblytics$adjusted_insert_size = as.numeric(assemblytics$adjusted_assm_end) - as.numeric(assemblytics$adjusted_assm_start)
+    assemblytics = assemblytics[,1:(ncol(assemblytics)-4)]
     
     return(assemblytics)
 }
@@ -306,7 +260,7 @@ assignComponent=function(i)  {
   net = graph_from_data_frame(d=edges, directed = F)
   membership = components(net)$membership
   components_count = count_components(net)
-  assemblytics_combined_per_chr$component = membership # add the component number to each INS
+  assemblytics_combined_per_chr$component = membership # add the component number to each INS 
   
   return(assemblytics_combined_per_chr)
 }
@@ -329,10 +283,17 @@ BN_validate = function(df){
     
   } else {
     
-    df$lower_bound[df$insert_size<1000] = df$insert_size[df$insert_size<1000] - 200
-    df$upper_bound[df$insert_size<1000] = df$insert_size[df$insert_size<1000] + 200
-    df$lower_bound[df$insert_size>=1000] = df$insert_size[df$insert_size>=1000] - 700
-    df$upper_bound[df$insert_size>=1000] = df$insert_size[df$insert_size>=1000] + 700
+    cutoff = sapply(df$insert_size, function(x) min(c(700, as.numeric(x)*0.2)))
+    
+    #df$cutoff = cutoff
+    
+    df$lower_bound = df$insert_size - cutoff
+    df$upper_bound = df$insert_size + cutoff
+    
+    # df$lower_bound[df$insert_size<1000] = df$insert_size[df$insert_size<1000] - 200
+    # df$upper_bound[df$insert_size<1000] = df$insert_size[df$insert_size<1000] + 200
+    # df$lower_bound[df$insert_size>=1000] = df$insert_size[df$insert_size>=1000] - 700
+    # df$upper_bound[df$insert_size>=1000] = df$insert_size[df$insert_size>=1000] + 700
     
     df$BN_validated = ifelse(df$BN_size>=df$lower_bound & df$BN_size<=df$upper_bound, 1, 0)
     df$BN_validated[df$BN_size==0] = -1
@@ -378,88 +339,274 @@ cal_edge_size = function(l, standard_inc=0.5){
   return(edge)
 }
 
-findRepresentativeSeq = function(assm_sub_df, res){
+findRepresentativeSeq = function(assm_sub_df, res, i, metadata){
   
   rep_seq = NULL
-  target_id = str_split_fixed(res$group[i], ";|,", 2)[,1]
-
-  # retrieve line
-  rep_seq[[1]] = assm_sub_df[assm_sub_df$INS_id==target_id,]
-  rep_seq[[1]]$type = 0 # type 0 means it'll stay in the main analysis pipeline; 1 means it'll not be included in the main analysis (supplementary dataset)
   
-  # identify all clusters
+  # identify all clusters and find the number of samples within each cluster
   all_clus = strsplit(res$group[i], ",")
+  all_clus_sample_size = sapply(strsplit(all_clus[[1]], ";"), function(x) length(unique(str_split_fixed(x, "_", 2)[,1])))
+  singleton_clus = all_clus[[1]][which(all_clus_sample_size==1)]
+  all_clus = all_clus[[1]][which(all_clus_sample_size!=1)]
+  #order = order(all_clus_sample_size, decreasing = T)
+  #all_clus = all_clus[[1]][order]
   
-  # extract the main cluster
-  main_clus_id = unlist(strsplit(all_clus[[1]][1], ";"))
-  main_clus_df = assm_sub_df[assm_sub_df$INS_id %in% main_clus_id,]
-  
-  # calculate edge score for main cluster if unique(sample)>1
-  if (length(unique(main_clus_df$sample))>1){
+  if (length(all_clus)==0){
+    rep_seq[[1]] = NULL
+  } else{
     
+    # extract the main cluster
+    main_clus_id = unlist(strsplit(all_clus[1], ";"))
+    main_clus_df = assm_sub_df[assm_sub_df$INS_id %in% main_clus_id,]
+    
+    main_clus_df = main_clus_df[order(match(main_clus_df$INS_id, main_clus_id)),]
+    
+    # sort main_clus_df by ngap size
+    main_clus_df = main_clus_df[order(main_clus_df$ngap),]
+    target_id = main_clus_df$INS_id[1]
+    
+    # retrieve line
+    rep_seq[[1]] = assm_sub_df[assm_sub_df$INS_id==target_id,]
+    rep_seq[[1]]$type = "main" # type 0 means it'll stay in the main analysis pipeline; 1 means it'll not be included in the main analysis (supplementary dataset)
+    rep_seq[[1]]$idx = i
+    
+    # If that sample has no BN maps, check other entries in the associated cluster for BN supporting evidence
+    if (is.na(rep_seq[[1]]$BN_enzyme)){
+        
+        cutoff = min(700,rep_seq[[1]]$insert_size)
+        
+        diff = abs(main_clus_df$BN_size - rep_seq[[1]]$insert_size)
+        if (any(diff < cutoff)){
+          
+          rep_seq[[1]]$BN_size = main_clus_df[which.min(diff),"BN_size"]
+          rep_seq[[1]]$BN_validated = 2
+        }
+        
+      
+    }
+    
+    
+    rep_seq[[1]]$PB_only = ifelse(all(main_clus_df$haplo=="unphased"), 1,0)
+    
+    # calculate edge score for main cluster if unique(sample)>1
+    if (length(unique(main_clus_df$sample))>1){
+      
       main_edge_df = main_clus_df[main_clus_df$ngap_boundaries_size_left==0 & main_clus_df$ngap_boundaries_size_right==0,]
       rep_seq[[1]]$edge_start = cal_edge_size(main_edge_df$ref_start)
       rep_seq[[1]]$edge_end = cal_edge_size(main_edge_df$ref_end)
+      rep_seq[[1]]$avg_edge = (rep_seq[[1]]$edge_start + rep_seq[[1]]$edge_end)/2
       
-  } else{
-    
+    } else{
+      
       rep_seq[[1]]$edge_start = NA
       rep_seq[[1]]$edge_end = NA
       
-  }
-  
-  clus_start = min(main_clus_df$ref_start)
-  clus_end = max(main_clus_df$ref_end)
-  
-  rep_seq[[1]]$cluster_id = paste0(rep_seq[[1]]$component, "_1" )
-  
-  rep_seq[[1]] = c(rep_seq[[1]], as.list(annotateRepSeq(main_clus_df))) 
-  
-  # If there are more than one clusters
-  if (res$cluster[i]>1){
+    }
     
-    for (l in 2:res$cluster[i]){ # for all other clusters...
-
-        cluster_id = unlist(strsplit(all_clus[[1]][l], ";"))
-        clus_df = assm_sub_df[assm_sub_df$INS_id %in% cluster_id,]
-  
-        rep_seq[[l]] = assm_sub_df[assm_sub_df$INS_id == cluster_id[1],]
+    # clus_start = min(main_clus_df$ref_start)
+    # clus_end = max(main_clus_df$ref_end)
+    
+    rep_seq[[1]]$cluster_id = paste0(rep_seq[[1]]$component, "_1" )
+    rep_seq[[1]]$first_cluster_hap_size = res$first_cluster_size[i]
+    rep_seq[[1]]$first_cluster_hap_perct = res$first_cluster_perct[i]
+    rep_seq[[1]]$first_cluster_sample_size = length(unique(main_clus_df$sample))
+    
+    rep_seq[[1]] = c(rep_seq[[1]], as.list(annotateRepSeq(main_clus_df))) 
+    #rep_seq[[1]]$sample_record = res$group[i]
+    updated_id = paste0(main_clus_id, collapse = ';')
+    rep_seq[[1]]$sample_record = updated_id
+    
+    # If there are more than one clusters
+    if (length(all_clus)>1){
+      
+      # check for overlap across the top sequence from each cluster
+      all_target_ids = unname(sapply(all_clus, function(x) str_split_fixed(x, pattern = ";",2)[,1]))
+      
+      # retrieve line
+      all_target_df = assm_sub_df[assm_sub_df$INS_id %in% all_target_ids,]
+      # make sure dataframe preserve the same order as cluster
+      all_target_df = all_target_df[order(match(all_target_df$INS_id, all_target_ids)),]
+      
+      all_target_df$ref_start = all_target_df$ref_start - 10
+      all_target_df$ref_end = all_target_df$ref_end + 10
+      all_target_df.gr = makeGRangesFromDataFrame(all_target_df, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end", ignore.strand = T )
+      
+      # self overlap
+      ov = findOverlaps(all_target_df.gr, all_target_df.gr)
+      
+      # find non-overlapping clusters
+      non_ov = sort(which(!1:length(all_clus) %in% ov@to[ov@from==1]))
+      
+      if (length(non_ov) > 0){
         
-        curr_start = min(clus_df$ref_start)
-        curr_end = max(clus_df$ref_end)
+        added_cluster = c(1, non_ov[1])
         
-        # check to see if other clusters overlap with existing cluster based on ref coordinates
-        rep_seq[[l]]$type = ifelse(all(clus_end <  curr_start) | all(clus_start > curr_end), 0, 1)
-
-        clus_start = c(clus_start, curr_start)
-        clus_end = c(clus_end, curr_end)
-
-        # for these clusters, calculate edge scores
-        if (length(unique(clus_df$sample))>1){
-          
-          edge_df = clus_df[clus_df$ngap_boundaries_size_left==0 & clus_df$ngap_boundaries_size_right==0,]
-          rep_seq[[l]]$edge_start = cal_edge_size(edge_df$ref_start)
-          rep_seq[[l]]$edge_end = cal_edge_size(edge_df$ref_end)
-          
-        } else{
-          
-          rep_seq[[l]]$edge_start = NA
-          rep_seq[[l]]$edge_end = NA
+        if (length(non_ov)>1){
+          for (j in 2:length(non_ov)){
+            subject_range.gr = all_target_df.gr[added_cluster]
+            query_range.gr = all_target_df.gr[non_ov[j]]
+            #print(j)
+            #print(subject_range.gr)
+            #print(query_range.gr)
+            ov = findOverlaps(query_range.gr, subject_range.gr)
+            if (all(!1:length(added_cluster) %in% ov@to)) {
+              #print("yes")
+              added_cluster = c(added_cluster, non_ov[j])
+              
+            }
+            
+          }
           
         }
         
-        rep_seq[[l]]$cluster_id = paste0(rep_seq[[l]]$component, "_", l)
-        
-        rep_seq[[l]] = c(rep_seq[[l]], as.list(annotateRepSeq(clus_df))) 
+        for (k in 2:length(added_cluster)){
+          
+          clus = added_cluster[k]
+          
+          cluster_id = unlist(strsplit(all_clus[clus], ";"))
+          clus_df = assm_sub_df[assm_sub_df$INS_id %in% cluster_id,]
+          clus_df = clus_df[order(match(clus_df$INS_id, cluster_id)),]
+          clus_df = clus_df[order(clus_df$ngap),]
+          
+          if (length(unique(clus_df$sample))==1) next
+          
+          rep_seq[[clus]] = assm_sub_df[assm_sub_df$INS_id == cluster_id[1],]
+          rep_seq[[clus]]$PB_only = ifelse(all(clus_df$haplo=="unphased"), 1,0)
+          
+          # for these clusters, calculate edge scores
+          if (length(unique(clus_df$sample))>1){
+            
+            edge_df = clus_df[clus_df$ngap_boundaries_size_left==0 & clus_df$ngap_boundaries_size_right==0,]
+            rep_seq[[clus]]$edge_start = cal_edge_size(edge_df$ref_start)
+            rep_seq[[clus]]$edge_end = cal_edge_size(edge_df$ref_end)
+            rep_seq[[clus]]$avg_edge = (rep_seq[[clus]]$edge_start + rep_seq[[clus]]$edge_end)/2
+            
+          } else{
+            
+            rep_seq[[clus]]$edge_start = NA
+            rep_seq[[clus]]$edge_end = NA
+            
+          }
+          
+          rep_seq[[clus]]$cluster_id = paste0(rep_seq[[clus]]$component, "_", clus)
+          rep_seq[[clus]]$idx = i
+          
+          if (is.na(rep_seq[[clus]]$BN_enzyme)){
+            
+            cutoff = min(700,rep_seq[[clus]]$insert_size)
+            
+            diff = abs(main_clus_df$BN_size - rep_seq[[clus]]$insert_size)
+            if (any(diff < cutoff)){
+              
+              rep_seq[[clus]]$BN_size = main_clus_df[which.min(diff),"BN_size"]
+              rep_seq[[clus]]$BN_validated = 2
+            }
+            
+            
+          }
+          
+          
+          rep_seq[[clus]] = c(rep_seq[[clus]], as.list(annotateRepSeq(clus_df))) 
+          updated_id = paste0(cluster_id, collapse = ';')
+          rep_seq[[clus]]$sample_record = updated_id
+          
+        }
         
       }
-
+      
+    }
+    
   }
-
+  
+  
   rep_seq = ldply(rep_seq, data.frame)
   return(rep_seq)
   
 }
+
+
+# findRepresentativeSeq = function(assm_sub_df, res){
+#   
+#   rep_seq = NULL
+#   target_id = str_split_fixed(res$group[i], ";|,", 2)[,1]
+# 
+#   # retrieve line
+#   rep_seq[[1]] = assm_sub_df[assm_sub_df$INS_id==target_id,]
+#   rep_seq[[1]]$type = 0 # type 0 means it'll stay in the main analysis pipeline; 1 means it'll not be included in the main analysis (supplementary dataset)
+#   
+#   # identify all clusters
+#   all_clus = strsplit(res$group[i], ",")
+#   
+#   # extract the main cluster
+#   main_clus_id = unlist(strsplit(all_clus[[1]][1], ";"))
+#   main_clus_df = assm_sub_df[assm_sub_df$INS_id %in% main_clus_id,]
+#   
+#   # calculate edge score for main cluster if unique(sample)>1
+#   if (length(unique(main_clus_df$sample))>1){
+#     
+#       main_edge_df = main_clus_df[main_clus_df$ngap_boundaries_size_left==0 & main_clus_df$ngap_boundaries_size_right==0,]
+#       rep_seq[[1]]$edge_start = cal_edge_size(main_edge_df$ref_start)
+#       rep_seq[[1]]$edge_end = cal_edge_size(main_edge_df$ref_end)
+#       
+#   } else{
+#     
+#       rep_seq[[1]]$edge_start = NA
+#       rep_seq[[1]]$edge_end = NA
+#       
+#   }
+#   
+#   clus_start = min(main_clus_df$ref_start)
+#   clus_end = max(main_clus_df$ref_end)
+#   
+#   rep_seq[[1]]$cluster_id = paste0(rep_seq[[1]]$component, "_1" )
+#   
+#   rep_seq[[1]] = c(rep_seq[[1]], as.list(annotateRepSeq(main_clus_df))) 
+#   
+#   # If there are more than one clusters
+#   if (res$cluster[i]>1){
+#     
+#     for (l in 2:res$cluster[i]){ # for all other clusters...
+# 
+#         cluster_id = unlist(strsplit(all_clus[[1]][l], ";"))
+#         clus_df = assm_sub_df[assm_sub_df$INS_id %in% cluster_id,]
+#   
+#         rep_seq[[l]] = assm_sub_df[assm_sub_df$INS_id == cluster_id[1],]
+#         
+#         curr_start = min(clus_df$ref_start)
+#         curr_end = max(clus_df$ref_end)
+#         
+#         # check to see if other clusters overlap with existing cluster based on ref coordinates
+#         rep_seq[[l]]$type = ifelse(all(clus_end <  curr_start) | all(clus_start > curr_end), 0, 1)
+# 
+#         clus_start = c(clus_start, curr_start)
+#         clus_end = c(clus_end, curr_end)
+# 
+#         # for these clusters, calculate edge scores
+#         if (length(unique(clus_df$sample))>1){
+#           
+#           edge_df = clus_df[clus_df$ngap_boundaries_size_left==0 & clus_df$ngap_boundaries_size_right==0,]
+#           rep_seq[[l]]$edge_start = cal_edge_size(edge_df$ref_start)
+#           rep_seq[[l]]$edge_end = cal_edge_size(edge_df$ref_end)
+#           
+#         } else{
+#           
+#           rep_seq[[l]]$edge_start = NA
+#           rep_seq[[l]]$edge_end = NA
+#           
+#         }
+#         
+#         rep_seq[[l]]$cluster_id = paste0(rep_seq[[l]]$component, "_", l)
+#         
+#         rep_seq[[l]] = c(rep_seq[[l]], as.list(annotateRepSeq(clus_df))) 
+#         
+#       }
+# 
+#   }
+# 
+#   rep_seq = ldply(rep_seq, data.frame)
+#   return(rep_seq)
+#   
+# }
 
 annotateRepSeq = function(clus_df){
   
@@ -535,6 +682,16 @@ checkResAssemblyticsComponentConcord = function(assemblytics, res){
   
   return(assemblytics)
 
+}
+
+findSingletonClus = function(assm_sub_df, res, i, metadata){
+  
+  all_clus = strsplit(res$group[i], ",")
+  all_clus_sample_size = sapply(strsplit(all_clus[[1]], ";"), function(x) length(unique(str_split_fixed(x, "_", 2)[,1])))
+  singleton_clus = unlist(strsplit( all_clus[[1]][which(all_clus_sample_size==1)], ";"))
+  singleton_df = assm_sub_df[assm_sub_df$INS_id %in% singleton_clus,]
+  return(singleton_df)
+  
 }
 
 # 

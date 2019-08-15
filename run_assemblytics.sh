@@ -15,12 +15,12 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
         (bash "${assemblytics}/Assemblytics" "$NUCMER_DIR" \
                 "$SAMPLE" 10000; 
 
-        python2.7 "${assemblytics}/compute_overlapping_coords.py" \
+        python2.7 "${assemblytics}/compute_all_coords.py" \
             -d "$NUCMER_DIR" \
             -i "$SAMPLE".variants_between_alignments.bed \
             -o "$SAMPLE".variants_between_alignments_new.bed;
-         
-        sed -e 's/$/\t\./' "$SAMPLE".variants_within_alignments.bed | \
+
+        sed -e 's/$/\t\.\t\./' "$SAMPLE".variants_within_alignments.bed | \
             cat - "$SAMPLE".variants_between_alignments_new.bed | \
             grep -E 'Insertion|Repeat_expansion|Tandem_expansion' | \
             awk '$5>=10' > "$SAMPLE".filtered_variants.bed;
@@ -35,12 +35,12 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
             (bash "${assemblytics}/Assemblytics" "$NUCMER_DIR""$haplo".delta \
                 "$SAMPLE"_"$haplo" 10000; 
 
-            python2.7 "${assemblytics}/compute_overlapping_coords.py" \
+            python2.7 "${assemblytics}/compute_all_coords.py" \
                 -d "$NUCMER_DIR""$haplo".delta \
                 -i "$SAMPLE"_"$haplo".variants_between_alignments.bed \
                 -o "$SAMPLE"_"$haplo".variants_between_alignments_new.bed;
-            
-            sed -e 's/$/\t\./' "$SAMPLE"_"$haplo".variants_within_alignments.bed | \
+             
+            sed -e 's/$/\t\.\t\./' "$SAMPLE"_"$haplo".variants_within_alignments.bed | \
                 cat - "$SAMPLE"_"$haplo".variants_between_alignments_new.bed | \
                 grep -E 'Insertion|Repeat_expansion|Tandem_expansion' | \
                 awk '$5>=10' > "$SAMPLE"_"$haplo".filtered_variants.bed;
@@ -50,15 +50,12 @@ while read -r SAMPLE SEX FASTQ_DIR LONGRANGER_DIR ASSM_DIR BN_DIR ENZYME SUPERNO
         done
     
     fi
-    
+        
     background=( $(jobs -p) )
     if (( ${#background[@]} == cores )); then
         wait
     fi
 
 done < "${workdir}/TMP_sample_metadata.txt"    
-        
-wait
 
-# remove intermediate files
-rm *.delta.gz *.coords.csv *coords.tab 
+wait

@@ -97,8 +97,10 @@ class global_count:
 			self.count[x]=self.count[x.upper()]*0.1
 	
 		Ncount=2*self.count['N']
-		
-		self.count={k:3*v+Ncount-total for k,v in self.count.items()}
+		gapcount=self.count['-']	
+
+	
+		self.count={k:3*v+Ncount+gapcount-total for k,v in self.count.items()}
 		
 		self.count['N']=-1
 		self.count['n']=0
@@ -279,21 +281,22 @@ def generate_files(insertions,tempfolder,refpath):
 
 	print 'masking repetitive region %s'%componentfile
 
-	os.system('RepeatMasker -qq -species human -xsmall -dir %s %s >&-'%(tempfolder+str(components[0]) ,componentfile))
+	os.system('RepeatMasker -qq -noint  -pa 1 -species human -xsmall -dir %s %s >&-'%(tempfolder+str(components[0]) ,componentfile))
 
 	maskedfile=[componentfile]+[tempfolder+str(components[0])+'/'+x for x in os.listdir(tempfolder+str(components[0])) if '.masked' in x]
 
 
 	maskedfile=maskedfile[-1]
 
-	print 'running muscle %s'%maskedfile
+	print 'running multialignment %s'%maskedfile
 
-	os.system('muscle -in %s -out %s -quiet'%(maskedfile, componentfile+'_out'))
+	#muscle -in %s -out %s -quiet
+	os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
 
 	iter0=0
 	while os.path.isfile(componentfile+'_out')==False and iter0<3:
 
-		os.system('muscle -in %s -out %s -quiet'%(maskedfile, componentfile+'_out'))
+		os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
 		time.sleep(100)
 		iter0+=1	
 
