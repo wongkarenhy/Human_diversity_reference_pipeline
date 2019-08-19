@@ -229,7 +229,7 @@ processAlignment = function(i) {
   assemblytics = assemblytics[-overlapping_coords@from,]
 
   # Remove if extreme gap sizes and small overall insert size (mostly to improve speed downstream)
-  disc = which((abs(assemblytics$ref_gap_size)>5000  & assemblytics$insert_size<100) | (abs(assemblytics$ref_gap_size)>10000  & assemblytics$insert_size<1000))
+  disc = which((abs(assemblytics$ref_gap_size)>5000  & assemblytics$insert_size<100) | (abs(assemblytics$ref_gap_size)>10000  & assemblytics$insert_size<1000) | (abs(assemblytics$ref_gap_size)>50000))
   if (length(disc)!=0){
     assemblytics = assemblytics[-disc,]
     
