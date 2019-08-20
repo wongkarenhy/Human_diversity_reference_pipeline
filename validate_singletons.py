@@ -92,7 +92,7 @@ def run(args):
 
 
 	print "loading sv file\n"	
-	csv_table=pd.read_csv(inputfile, sep='\t')
+	csv_table=pd.read_csv(inputfile, sep='\t',keep_default_na=False)
 	
 	csvdata=csv_table[['ref_chr','ref_start','ref_end','insert_size','INS_id']].values.tolist()
 	
@@ -145,12 +145,22 @@ def run(args):
 	print "organizing data\n"	
 	allnames={x:i for i,x in enumerate(list(csv_table['INS_id']))}
 	
-	alloverlaps=[[x[0],';'.join(x[1])+';'] for x in sorted(alloverlaps, key=lambda x:allnames[x[0]])]
+	alloverlaps=[[x[0],';'.join(x[1])+';',len(set([a.split('_')[0] for a in x[1]]))] for x in sorted(alloverlaps, key=lambda x:allnames[x[0]])]
 	
+
+	alloverlaps=pd.DataFrame.from_records(alloverlaps, columns=['INS_id',"bionano_overlap","concordant_sample_num"])
+
+
+	output=pd.merge(csv_table, alloverlaps, on='INS_id')
+
 	print "outputing\n"
 
-	pd.DataFrame.from_records(alloverlaps).to_csv(outputfile, mode='w',sep='\t', header=None, index=False)
 
+
+	output.loc[output["concordant_sample_num"]>0].to_csv(outputfile+'_validated.txt', mode='w',sep='\t', header=None, index=False)
+
+
+	output.loc[output["concordant_sample_num"]==0].to_csv(outputfile+'_notvalidated.txt', mode='w',sep='\t', header=None, index=False)
 
 
 
