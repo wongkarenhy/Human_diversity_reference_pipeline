@@ -34,7 +34,7 @@ while read -r LINE; do
     
     (RepeatMasker -species human -xsmall -pa 1 -dir "$OUTPUT"/"$INS_ID" "$OUTPUT"/"$INS_ID".fa ;
     trf "$OUTPUT"/"$INS_ID".fa 2 7 7 80 10 50 2000 -m -h ;   
-    mv "$INS_ID".fa.2.7.7.80.10.50.2000.mask* "$OUTPUT"/"$INS_ID"/ ;
+    mv "$INS_ID".fa.2.7.7.80.10.50.2000* "$OUTPUT"/"$INS_ID"/ ;
     seqtk comp "$OUTPUT"/"$INS_ID"/"$INS_ID".fa.2.7.7.80.10.50.2000.mask | awk '{print $1, $2, $9, $9/$2}' > "$OUTPUT"/"$INS_ID"/trf_rep_seq_count.txt ;
     seqtk comp "$OUTPUT"/"$INS_ID".fa | awk '{print $1, ($4+$5)/$2}' > "$OUTPUT"/"$INS_ID"/gc_count.txt ) &
     

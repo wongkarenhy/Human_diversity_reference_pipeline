@@ -135,8 +135,8 @@ def run(args):
 		print "running %s\n"%chr0
 
 		if chr0[3:].isdigit():chr0_rename=chr0[3:] 
-		elif chr0[3:]=='23': chr0_rename="X" 
-		elif chr0[3:]=='24': chr0_rename="Y"
+		elif chr0[3:] in ['X','x']: chr0_rename="23" 
+		elif chr0[3:] in ['Y','y']: chr0_rename="24"
 		
 		biodata0=bio_eachchr[chr0_rename]
 		

@@ -170,7 +170,6 @@ for (chr in chr_list){
 
 
 
-#df2 = fread("../discovery/assemblytics_representative_seq_raw_chr10.txt", stringsAsFactors = F)
 
 
 

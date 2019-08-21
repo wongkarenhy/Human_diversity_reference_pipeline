@@ -290,11 +290,6 @@ BN_validate = function(df){
     df$lower_bound = df$insert_size - cutoff
     df$upper_bound = df$insert_size + cutoff
     
-    # df$lower_bound[df$insert_size<1000] = df$insert_size[df$insert_size<1000] - 200
-    # df$upper_bound[df$insert_size<1000] = df$insert_size[df$insert_size<1000] + 200
-    # df$lower_bound[df$insert_size>=1000] = df$insert_size[df$insert_size>=1000] - 700
-    # df$upper_bound[df$insert_size>=1000] = df$insert_size[df$insert_size>=1000] + 700
-    
     df$BN_validated = ifelse(df$BN_size>=df$lower_bound & df$BN_size<=df$upper_bound, 1, 0)
     df$BN_validated[df$BN_size==0] = -1
     
@@ -339,6 +334,19 @@ cal_edge_size = function(l, standard_inc=0.5){
   return(edge)
 }
 
+edgeConsistency = function(l){
+  lenl = length(l)
+  if (lenl<2) score = NA
+  else {
+    l_median = median(l)
+    lower_bound = l_median-5
+    upper_bound = l_median+5
+    score = length(which(l>lower_bound & l<upper_bound))/lenl
+  }
+  return(score)
+  
+}
+
 findRepresentativeSeq = function(assm_sub_df, res, i, metadata){
   
   rep_seq = NULL
@@ -371,7 +379,7 @@ findRepresentativeSeq = function(assm_sub_df, res, i, metadata){
     rep_seq[[1]]$idx = i
     
     # If that sample has no BN maps, check other entries in the associated cluster for BN supporting evidence
-    if (is.na(rep_seq[[1]]$BN_enzyme)){
+    if (rep_seq[[1]]$BN_validated!=1){
         
         cutoff = min(700,rep_seq[[1]]$insert_size)
         
@@ -395,6 +403,9 @@ findRepresentativeSeq = function(assm_sub_df, res, i, metadata){
       rep_seq[[1]]$edge_start = cal_edge_size(main_edge_df$ref_start)
       rep_seq[[1]]$edge_end = cal_edge_size(main_edge_df$ref_end)
       rep_seq[[1]]$avg_edge = (rep_seq[[1]]$edge_start + rep_seq[[1]]$edge_end)/2
+      rep_seq[[1]]$edge_start2 = edgeConsistency(main_edge_df$ref_start)
+      rep_seq[[1]]$edge_end2 = edgeConsistency(main_edge_df$ref_end)
+      rep_seq[[1]]$avg_edge2 = (rep_seq[[1]]$edge_start2 + rep_seq[[1]]$edge_end2)/2
       
     } else{
       
@@ -480,6 +491,9 @@ findRepresentativeSeq = function(assm_sub_df, res, i, metadata){
             rep_seq[[clus]]$edge_start = cal_edge_size(edge_df$ref_start)
             rep_seq[[clus]]$edge_end = cal_edge_size(edge_df$ref_end)
             rep_seq[[clus]]$avg_edge = (rep_seq[[clus]]$edge_start + rep_seq[[clus]]$edge_end)/2
+            rep_seq[[clus]]$edge_start2 = edgeConsistency(main_edge_df$ref_start)
+            rep_seq[[clus]]$edge_end2 = edgeConsistency(main_edge_df$ref_end)
+            rep_seq[[clus]]$avg_edge2 = (rep_seq[[clus]]$edge_start2 + rep_seq[[clus]]$edge_end2)/2
             
           } else{
             
@@ -491,7 +505,7 @@ findRepresentativeSeq = function(assm_sub_df, res, i, metadata){
           rep_seq[[clus]]$cluster_id = paste0(rep_seq[[clus]]$component, "_", clus)
           rep_seq[[clus]]$idx = i
           
-          if (is.na(rep_seq[[clus]]$BN_enzyme)){
+          if (rep_seq[[clus]]$BN_validated!=1){
             
             cutoff = min(700,rep_seq[[clus]]$insert_size)
             
@@ -523,6 +537,7 @@ findRepresentativeSeq = function(assm_sub_df, res, i, metadata){
   return(rep_seq)
   
 }
+
 
 
 # findRepresentativeSeq = function(assm_sub_df, res){
@@ -690,7 +705,10 @@ findSingletonClus = function(assm_sub_df, res, i, metadata){
   all_clus_sample_size = sapply(strsplit(all_clus[[1]], ";"), function(x) length(unique(str_split_fixed(x, "_", 2)[,1])))
   singleton_clus = unlist(strsplit( all_clus[[1]][which(all_clus_sample_size==1)], ";"))
   singleton_df = assm_sub_df[assm_sub_df$INS_id %in% singleton_clus,]
-  return(singleton_df)
+  
+  if (nrow(singleton_df)!=0){
+    return(singleton_df)
+  }
   
 }
 
