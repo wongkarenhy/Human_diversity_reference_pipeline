@@ -56,7 +56,7 @@ for (chr in chr_list){
   
     res = NULL
     for (size in c("small", "big")){
-        res_df = fread(paste0(dir, "/discovery/ma/multi_results_",size,"_chr",chr,".txt"), stringsAsFactors = F, drop = 3)
+        res_df = fread(paste0(dir, "/discovery/ma/multi_results_chr",chr,"_",size,".txt"), stringsAsFactors = F, drop = 3)
         res = rbind.data.frame(res, res_df, stringsAsFactors = F)
     }
 
