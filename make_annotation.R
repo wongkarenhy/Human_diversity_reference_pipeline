@@ -170,15 +170,20 @@ repeatAnnotate = function(i){
 #for (i in 1:nrow(rep_seq)){
   
     key = rep_seq$INS_id[i]
-    try = tryCatch(fread(paste0(dir, "/discovery/repeatmasker/",key,"/",key,".fa.tbl"), skip = 9, nrows = 21, blank.lines.skip = T, fill = T, sep = '\t'), error=function(e) NULL)
-    trf = tryCatch(fread(paste0(dir, "/discovery/repeatmasker/",key,"/trf_rep_seq_count.txt"), drop = 1:3), error=function(e) NULL)
-    if (!is.null(trf)){
-      rep_seq$trf[i] = trf$V4
-    }
-    gc = tryCatch(fread(paste0(dir, "/discovery/repeatmasker/",key,"/gc_count.txt"), drop = 1), error=function(e) NULL)
+    try = tryCatch(fread(paste0(dir, "/discovery/repeatmasker/",rep_seq$sample[i],"/",key,"/",key,".fa.tbl"), skip = 9, nrows = 21, blank.lines.skip = T, fill = T, sep = '\t'), error=function(e) NULL)
+    gc = tryCatch(fread(paste0(dir, "/discovery/repeatmasker/",,rep_seq$sample[i],"/"key,"/gc_count.txt")), error=function(e) NULL)
     if (!is.null(gc)){
-      rep_seq$gc[i] = gc$V2
+      colnames(gc) = c("id", "len", "A", "C", "G", "T", "ambiguous", "ignore", "N", "CpG", "tv", "ts", "CpGpair")
+      seq_N = as.numeric(gc$N)
+      rep_seq$gc[i] = (gc$C + gc$G)/(gc$len-gc$N)
     }
+    
+    trf = tryCatch(fread(paste0(dir, "/discovery/repeatmasker/",rep_seq$sample[i],"/",key,"/trf_rep_seq_count.txt")), error=function(e) NULL)
+    if (!is.null(trf)){
+      colnames(trf) = c("id", "len", "A", "C", "G", "T", "ambiguous", "ignore", "N", "CpG", "tv", "ts", "CpGpair")
+      rep_seq$trf[i] = (trf$N - seq_N)/(trf$len - seq_N)
+    }
+    
     if (is.null(try)){
       rep_seq$repeatClass[i] = "none"
       rep_seq$repeatEnriched_RM[i] = 0
@@ -201,10 +206,11 @@ repeatAnnotate = function(i){
 }
 
 rep_seq_repeats = mclapply(1:nrow(rep_seq), repeatAnnotate, mc.cores = threads)
+job_err = rep_seq_repeats[1:length(rep_seq)]
+stopifnot(length(which(grepl("Error", job_err)))==0)
+
 rep_seq_repeats = ldply(rep_seq_repeats, data.frame)
 
-job_err = res[1:length(rep_seq)]
-stopifnot(length(which(grepl("Error", job_err)))==0)
 
 
         
