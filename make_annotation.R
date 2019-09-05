@@ -44,7 +44,10 @@ option_list = list(
   make_option(c("-e", "--exon"), action="store", default=NA, type='character',
               help="path to coding exon, 5' and 3' UTR merged bed file"),
   make_option(c("-f", "--func"), action="store", default=NA, type='character',
-              help="path to functional element bed file")
+              help="path to functional element bed file"),
+  make_option(c("-b", "--build"), action="store", default=NA, type='character',
+              help="path to ensemble regulatory build")
+  
   
 )
 
@@ -65,9 +68,10 @@ source(paste0(dir, "/scripts/insertion_filtering_functions.R"))
 #coding_utr = "../../../../KwokRaid02/karen/database/genome_annotation/08022019/ncbiRefSeq_ucsc_track_coding_exon_3_5_UTR_merged.bed"
 #dir="../"
 #func = "../../../../KwokRaid02/karen/database/genome_annotation/08022019/refSeqFuncElems_all_fields.bed"
+#build = "../../../../KwokRaid02/karen/database/genome_annotation/08022019/homo_sapiens.GRCh38.Regulatory_Build.regulatory_features.20190329.gff"
 
 # ------------------------------------------------------------ Annotation --------------------------------------------------------------
-#chr_list = c(1:22, "X", "Y")
+chr_list = c(1:22, "X", "Y")
 
 # read gene info
 refFlat = fread(refFlat, stringsAsFactors = F, select = c("chrom", "txStart", "txEnd", "name2"))
@@ -80,6 +84,20 @@ colnames(coding_utr) = c("chr", "start", "end", "type")
 # read functional element annotation file
 func = fread(func, stringsAsFactors = F, select = c("#chrom", "chromStart", "chromEnd", "name"))
 colnames(func)[1] = "chr"
+
+# read ensemble regulatory build file
+reg = fread(build, stringsAsFactors = F, select = c(1,3:5), sep = "\t")
+colnames(reg) = c("chr", "reg_type", "start", "end")
+reg = reg[reg$chr %in% chr_list,]
+reg$chr = paste0("chr", reg$chr)
+
+# Split reg into different reg_type
+reg_CTCF = reg[reg$reg_type=="CTCF_binding_site",]
+reg_enhancer = reg[reg$reg_type=="enhancer",]
+reg_open_chr = reg[reg$reg_type=="open_chromatin_region",]
+reg_promoter = reg[reg$reg_type=="promoter",]
+reg_promoter_f = reg[reg$reg_type=="promoter_flanking_region",]
+reg_TF = reg[reg$reg_type=="TF_binding_site",]
 
 # read sample metadata
 metadata = read.table(paste0(dir, "/TMP_sample_metadata.txt"), stringsAsFactors = F)
@@ -102,33 +120,51 @@ colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzym
 #     chr = chr_list[i]
 #     print(chr)
     # read input sequences and databases
-    rep_seq = fread(paste0(dir, "/discovery/all_raw.txt"), stringsAsFactors = F)
-    colnames(rep_seq) = c("ref_chr","ref_start","ref_end","insert_size","strand","ref_gap_size","q_gap_size","assm_coords","assm_id","assm_start","assm_end","adjusted_coords","adjusted_assm_start","adjusted_assm_end","adjusted_insert_size","gap_ratio","BN_size","label_dist","BN_start","BN_end","BN_enzyme","BN_validated","ngap","ngap_boundaries","ngap_boundaries_size_left","ngap_boundaries_size_right","ngap_perct","sample","haplo","method","anchors_r","INS_id","component","type","idx","PB_only","edge_start","edge_end","avg_edge","edge_start2","edge_end2","avg_edge2","cluster_id","first_cluster_hap_size","first_cluster_hap_perct","first_cluster_sample_size","sample_count","sample_perct","sample_record","sample_AFR","sample_AMR","sample_EAS","sample_EUR","sample_SAS","sample_nonAFR","percent_AFR","percent_AMR","percent_EAS","percent_EUR","percent_SAS","percent_nonAFR")
+rep_seq = fread(paste0(dir, "/discovery/all_raw.txt"), stringsAsFactors = F)
+colnames(rep_seq) = c("ref_chr","ref_start","ref_end","insert_size","strand","ref_gap_size","q_gap_size","assm_coords","assm_id","assm_start","assm_end","adjusted_coords","adjusted_assm_start","adjusted_assm_end","adjusted_insert_size","gap_ratio","BN_size","label_dist","BN_start","BN_end","BN_enzyme","BN_validated","ngap","ngap_boundaries","ngap_boundaries_size_left","ngap_boundaries_size_right","ngap_perct","sample","haplo","method","anchors_r","INS_id","component","type","idx","PB_only","edge_start","edge_end","avg_edge","edge_start2","edge_end2","avg_edge2","cluster_id","first_cluster_hap_size","first_cluster_hap_perct","first_cluster_sample_size","sample_count","sample_perct","sample_record","sample_AFR","sample_AMR","sample_EAS","sample_EUR","sample_SAS","sample_nonAFR","percent_AFR","percent_AMR","percent_EAS","percent_EUR","percent_SAS","percent_nonAFR")
 
-    # if type==BN and BN_validated !=1 --> 2
-    rep_seq$BN_validated = ifelse(rep_seq$BN_validated!=1 & rep_seq$type=="BN", 2, rep_seq$BN_validated)
-    
-    # create grange objects for variables
-    rep_seq.gr = makeGRangesFromDataFrame(rep_seq, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end", ignore.strand = T)
-    refFlat.gr = makeGRangesFromDataFrame(refFlat)
-    coding_utr.gr = makeGRangesFromDataFrame(coding_utr)
-    func.gr = makeGRangesFromDataFrame(func, seqnames.field = "chr", start.field = "chromStart", end.field = "chromEnd", ignore.strand = T)
-    
-    # Find overlap
-    seq_refFlat_ov = findOverlaps(rep_seq.gr, refFlat.gr, type = "any")
-    seq_coding_utr_ov = findOverlaps(rep_seq.gr, coding_utr.gr, type = "any")
-    seq_func_ov = findOverlaps(rep_seq.gr, func.gr, type = "any")
-    
-    rep_seq$gene = NA
-    rep_seq$gene[seq_refFlat_ov@from] = refFlat$name2[seq_refFlat_ov@to]
-    
-    rep_seq$genom_anno = "intron"
-    rep_seq$genom_anno[seq_coding_utr_ov@from] = coding_utr$type[seq_coding_utr_ov@to]
-    
-    rep_seq$genom_anno = ifelse(is.na(rep_seq$gene) & rep_seq$genom_anno=="intron", "intergenic", rep_seq$genom_anno)
-    
-    rep_seq$func = NA
-    rep_seq$func[seq_func_ov@from] = func$name[seq_func_ov@to]
+# if type==BN and BN_validated !=1 --> 2
+rep_seq$BN_validated = ifelse(rep_seq$BN_validated!=1 & rep_seq$type=="BN", 2, rep_seq$BN_validated)
+
+# create grange objects for variables
+rep_seq.gr = makeGRangesFromDataFrame(rep_seq, seqnames.field = "ref_chr", start.field = "ref_start", end.field = "ref_end", ignore.strand = T)
+refFlat.gr = makeGRangesFromDataFrame(refFlat)
+coding_utr.gr = makeGRangesFromDataFrame(coding_utr)
+func.gr = makeGRangesFromDataFrame(func, seqnames.field = "chr", start.field = "chromStart", end.field = "chromEnd", ignore.strand = T)
+#reg.gr = makeGRangesFromDataFrame(reg, seqnames.field = "chr", start.field = "start", end.field = "end")
+reg_CTCF.gr = makeGRangesFromDataFrame(reg_CTCF)
+reg_enhancer.gr = makeGRangesFromDataFrame(reg_enhancer)
+reg_open_chr.gr = makeGRangesFromDataFrame(reg_open_chr)
+reg_promoter.gr = makeGRangesFromDataFrame(reg_promoter)
+reg_promoter_f.gr = makeGRangesFromDataFrame(reg_promoter_f)
+reg_TF.gr = makeGRangesFromDataFrame(reg_TF)
+
+# Find overlap
+seq_refFlat_ov = findOverlaps(rep_seq.gr, refFlat.gr, type = "any")
+seq_coding_utr_ov = findOverlaps(rep_seq.gr, coding_utr.gr, type = "any")
+seq_func_ov = findOverlaps(rep_seq.gr, func.gr, type = "any")
+seq_reg_CTCF_ov = findOverlaps(rep_seq.gr, reg_CTCF.gr, type = "any")
+seq_reg_enhancer_ov = findOverlaps(rep_seq.gr, reg_enhancer.gr, type = "any")
+seq_reg_open_chr_ov = findOverlaps(rep_seq.gr, reg_open_chr.gr, type = "any")
+seq_reg_promoter_ov = findOverlaps(rep_seq.gr, reg_promoter.gr, type = "any")
+seq_reg_promoter_f_ov = findOverlaps(rep_seq.gr, reg_promoter_f.gr, type = "any")
+seq_reg_TF_ov = findOverlaps(rep_seq.gr, reg_TF.gr, type = "any")
+
+rep_seq[,c("gene","genom_anno", "func", "reg_CTCF", "reg_enhancer", "reg_open_chr", "reg_promoter", "reg_promoter_f", "reg_TF", "repeatClass","SINE", "LINE", "LTR", "DNA", "small_RNA", "satellites","simpleRepeat", "lowComplex", "repeatEnriched_RM","trf", "gc")] = 0
+
+rep_seq$gene[seq_refFlat_ov@from] = refFlat$name2[seq_refFlat_ov@to]
+rep_seq$genom_anno = "intron"
+rep_seq$genom_anno[seq_coding_utr_ov@from] = coding_utr$type[seq_coding_utr_ov@to]
+rep_seq$genom_anno = ifelse(is.na(rep_seq$gene) & rep_seq$genom_anno=="intron", "intergenic", rep_seq$genom_anno)
+rep_seq$func[seq_func_ov@from] = func$name[seq_func_ov@to]
+rep_seq$reg_CTCF[seq_reg_CTCF_ov@from] = 1
+rep_seq$reg_enhancer[seq_reg_enhancer_ov@from] = 1
+rep_seq$reg_open_chr[seq_reg_open_chr_ov@from] = 1
+rep_seq$reg_promoter[seq_reg_promoter_ov@from] = 1
+rep_seq$reg_promoter_f[seq_reg_promoter_f_ov@from] = 1
+rep_seq$reg_TF[seq_reg_TF_ov@from] = 1
+
+
 
     # rep_seq_all[[i]] = rep_seq
 # } 
@@ -160,9 +196,6 @@ colnames(metadata) = c("sample", "sex", "fastq", "bam", "assembly", "BN", "enzym
 # # adjust p value for multiple testings
 # rep_seq$pop_chisq_P_adj = p.adjust(rep_seq$pop_chisq_P, method = "BH")
 
-# add repeats annotation
-rep_seq[,c("repeatClass","SINE", "LINE", "LTR", "DNA", "small_RNA", "satellites","simpleRepeat", "lowComplex", "repeatEnriched_RM","trf", "gc")] = NA
- 
 #rep_seq = rep_seq[1:100,]
 
 rep_seq_repeats = NULL
@@ -171,7 +204,7 @@ repeatAnnotate = function(i){
   
     key = rep_seq$INS_id[i]
     try = tryCatch(fread(paste0(dir, "/discovery/repeatmasker/",rep_seq$sample[i],"/",key,"/",key,".fa.tbl"), skip = 9, nrows = 21, blank.lines.skip = T, fill = T, sep = '\t'), error=function(e) NULL)
-    gc = tryCatch(fread(paste0(dir, "/discovery/repeatmasker/",,rep_seq$sample[i],"/"key,"/gc_count.txt")), error=function(e) NULL)
+    gc = tryCatch(fread(paste0(dir, "/discovery/repeatmasker/",rep_seq$sample[i],"/",key,"/gc_count.txt")), error=function(e) NULL)
     if (!is.null(gc)){
       colnames(gc) = c("id", "len", "A", "C", "G", "T", "ambiguous", "ignore", "N", "CpG", "tv", "ts", "CpGpair")
       seq_N = as.numeric(gc$N)
@@ -197,8 +230,8 @@ repeatAnnotate = function(i){
           col = k+65
           rep_seq[[i,col]] = rev(strsplit(try$classes[k], "\\s+")[[1]])[2]
       }
-      rep_seq$repeatClass[i] = names(which.max(rep_seq[i,66:73]))
-      rep_seq$repeatEnriched_RM[i] = ifelse(sum(as.numeric(rep_seq[i,66:73]))>50,1,0)
+      rep_seq$repeatClass[i] = names(which.max(rep_seq[i,72:79]))
+      rep_seq$repeatEnriched_RM[i] = ifelse(sum(as.numeric(rep_seq[i,72:79]))>50,1,0)
       
     }
     
@@ -234,7 +267,7 @@ write.table(rep_seq_repeats, paste0(dir, "/discovery/assemblytics_representative
 
 
 
-
+#df = fread("../discovery/assemblytics_representative_seq_annotated.txt", stringsAsFactors = F)
 
 
 
