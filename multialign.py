@@ -244,7 +244,6 @@ def generate_files(insertions,tempfolder,refpath):
 	
 	scaffolds=[x.split(':')[0] for x in assem_coordi]
 	
-	"""
 	if os.path.isfile(componentfile):
 		try:
 			os.system('rm %s'%componentfile)
@@ -256,7 +255,6 @@ def generate_files(insertions,tempfolder,refpath):
 			os.system('mkdir %s'%(tempfolder+str(components[0])))
 		except:
 			pass
-	"""
 		
 	cmds=[]
 	skipfiles=[]
@@ -307,13 +305,12 @@ def generate_files(insertions,tempfolder,refpath):
 		return 'pass',skipfiles
 
 	return componentfile,skipfiles
-	#map(os.system,cmds)
+	map(os.system,cmds)
 
 
 	print 'masking repetitive region %s'%componentfile
 
-	#os.system('RepeatMasker -qq -noint  -pa 1 -species human -xsmall -dir %s %s >&-'%(tempfolder+str(components[0]) ,componentfile))
-	"""
+	os.system('RepeatMasker -qq -noint  -pa 1 -species human -xsmall -dir %s %s >&-'%(tempfolder+str(components[0]) ,componentfile))
 
 	maskedfile=[componentfile]+[tempfolder+str(components[0])+'/'+x for x in os.listdir(tempfolder+str(components[0])) if '.masked' in x]
 	
@@ -321,14 +318,14 @@ def generate_files(insertions,tempfolder,refpath):
 	maskedfile=maskedfile[-1]
 
 	print 'running multialignment %s'%maskedfile
-	"""
+
 	#muscle -in %s -out %s -quiet
-	#os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
+	os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
 
 	iter0=0
 	while os.path.isfile(componentfile+'_out')==False and iter0<3:
 
-		#os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
+		os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
 		time.sleep(100)
 		iter0+=1	
 
@@ -337,7 +334,6 @@ def generate_files(insertions,tempfolder,refpath):
 
 	print 'integrating both files %s'%(componentfile+'_out')
 
-	"""
 	if maskedfile!=componentfile or 1==1:
 
 		with open(componentfile+'_out',mode='r') as f:
@@ -365,7 +361,6 @@ def generate_files(insertions,tempfolder,refpath):
 
 		f.close()
 	
-	"""
 
 	return componentfile,skipfiles
 		
