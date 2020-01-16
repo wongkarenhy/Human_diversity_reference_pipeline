@@ -89,23 +89,52 @@ class global_count:
 		total=len(l)
 		
 		self.count=cl.defaultdict(int)
-		
+	
+
+		find_masked=0
+
+	
 		for x in l:
 			self.count[x.upper()]+=1
+
 	
-		for x in ['a','t','c','g']:
-			self.count[x]=self.count[x.upper()]*0.1
-	
+		for x in l:
+			#self.count[x]=self.count[x.upper()]*0.1
+
+			if x.islower():
+
+				find_masked=1
+
+				break
+		
+
 		Ncount=2*self.count['N']
 		gapcount=self.count['-']	
 
+
+		self.count['N']=-total*0.5
 	
-		self.count={k:3*v+Ncount+gapcount-total for k,v in self.count.items()}
+		if not find_masked:
+
+			self.count={k:3*v+Ncount+gapcount-total for k,v in self.count.items()}
 		
-		self.count['N']=-1
-		self.count['n']=0
+
+		else:
+			
+		
+			self.count={k:1.0*(3*v+Ncount+gapcount-total)/10 for k,v in self.count.items()}
+
 
 		self.count['-']=0
+
+		for x in ['a','t','c','g','n']:
+
+			upper_value=self.count.get(x.upper()) 
+
+			if upper_value !=None:
+				self.count[x.lower()]=upper_value
+
+
 
 
 
@@ -124,8 +153,9 @@ class multi_align:
 			
 			
 			count=[global_count(x) for x in zip(*self.alignments)]
-			
+				
 			self.score=[sum([gcount.count[x] for x,gcount in zip(alignment,count)]) for alignment in self.alignments]
+
 			
 		elif len(self.titles)==1:
 			self.score=100			
@@ -214,6 +244,7 @@ def generate_files(insertions,tempfolder,refpath):
 	
 	scaffolds=[x.split(':')[0] for x in assem_coordi]
 	
+	"""
 	if os.path.isfile(componentfile):
 		try:
 			os.system('rm %s'%componentfile)
@@ -225,7 +256,7 @@ def generate_files(insertions,tempfolder,refpath):
 			os.system('mkdir %s'%(tempfolder+str(components[0])))
 		except:
 			pass
-
+	"""
 		
 	cmds=[]
 	skipfiles=[]
@@ -275,28 +306,29 @@ def generate_files(insertions,tempfolder,refpath):
 
 		return 'pass',skipfiles
 
-
-	map(os.system,cmds)
+	return componentfile,skipfiles
+	#map(os.system,cmds)
 
 
 	print 'masking repetitive region %s'%componentfile
 
-	os.system('RepeatMasker -qq -noint  -pa 1 -species human -xsmall -dir %s %s >&-'%(tempfolder+str(components[0]) ,componentfile))
+	#os.system('RepeatMasker -qq -noint  -pa 1 -species human -xsmall -dir %s %s >&-'%(tempfolder+str(components[0]) ,componentfile))
+	"""
 
 	maskedfile=[componentfile]+[tempfolder+str(components[0])+'/'+x for x in os.listdir(tempfolder+str(components[0])) if '.masked' in x]
-
+	
 
 	maskedfile=maskedfile[-1]
 
 	print 'running multialignment %s'%maskedfile
-
+	"""
 	#muscle -in %s -out %s -quiet
-	os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
+	#os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
 
 	iter0=0
 	while os.path.isfile(componentfile+'_out')==False and iter0<3:
 
-		os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
+		#os.system('kalign -i %s  -o %s -f fasta -quiet'%(maskedfile, componentfile+'_out'))
 		time.sleep(100)
 		iter0+=1	
 
@@ -305,6 +337,7 @@ def generate_files(insertions,tempfolder,refpath):
 
 	print 'integrating both files %s'%(componentfile+'_out')
 
+	"""
 	if maskedfile!=componentfile or 1==1:
 
 		with open(componentfile+'_out',mode='r') as f:
@@ -332,7 +365,7 @@ def generate_files(insertions,tempfolder,refpath):
 
 		f.close()
 	
-	
+	"""
 
 	return componentfile,skipfiles
 		
@@ -381,6 +414,8 @@ def compare(insertions):
 		else:
 
 			print 'grouping %s'%componentfile
+			if not os.path.isfile(componentfile+'_out'):
+				return
 
 			with open(componentfile+'_out',mode='r') as f:
 				reads=f.read().split('>')[1:]
