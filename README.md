@@ -1,4 +1,5 @@
-# Insertion_reference
+# Human Diversity Reference Pipeline
+## By Karen Wong and Walfred Ma
 
 ## Required software:
 RepeatMasker version open-4.0.7 (Dfam v2.0) <br>
